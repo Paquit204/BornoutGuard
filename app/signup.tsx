@@ -47,8 +47,6 @@ export default function SignupScreen() {
         },
       });
 
-      console.log('🔐 Signup response:', { data, error });
-
       if (error) {
         let message = error.message;
         if (error.message.includes('User already registered')) {
@@ -66,17 +64,17 @@ export default function SignupScreen() {
         } else {
           message = `Sign-up failed: ${error.message}`;
         }
-
         Alert.alert('Signup Failed', message);
       } else {
+        await supabase.auth.signOut();
         Alert.alert(
           'Account Created!',
-          'Welcome to BurnoutGuard. You can now sign in.',
+          'Please sign in with your new credentials.',
           [{ text: 'OK', onPress: () => router.replace('/login') }]
         );
       }
     } catch (err: any) {
-      console.error('🔥 Unexpected signup error:', err);
+      console.error('Unexpected signup error:', err);
       Alert.alert(
         'Signup Error',
         'An unexpected error occurred. Please check your internet connection and try again.'

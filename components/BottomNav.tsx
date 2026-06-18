@@ -3,10 +3,9 @@ import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 const tabs = [
-  { name: 'Today', path: '/dashboard', icon: '📊' },
+  { name: 'Today', path: '/dashboard', icon: '🏠' },
   { name: 'Check-in', path: '/checkin', icon: '✅' },
-  { name: 'Trends', path: '/analytics', icon: '📈' },
-  { name: 'Profile', path: '/profile', icon: '👤' },
+  { name: 'Trends', path: '/analytics', icon: '📊' },
 ];
 
 export default function BottomNav() {

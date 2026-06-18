@@ -13,6 +13,7 @@ import BottomNav from '../components/BottomNav';
 import CustomButton from '../components/CustomButton';
 import LoadingSpinner from '../components/LoadingSpinner';
 import TopBar from '../components/TopBar';
+import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { calculateBurnout } from '../services/burnoutCalculator';
 
@@ -82,6 +83,7 @@ const stepperStyles = StyleSheet.create({
 });
 
 export default function CheckinScreen() {
+  const { profile } = useAuth();
   const [studyHours, setStudyHours] = useState(4);
   const [sleepHours, setSleepHours] = useState(7);
   const [assignments, setAssignments] = useState(2);
@@ -123,9 +125,16 @@ export default function CheckinScreen() {
 
   if (loading) return <LoadingSpinner message="Saving..." />;
 
+  const displayName = profile?.full_name || profile?.email?.split('@')[0] || 'Student';
+
   return (
     <View style={styles.root}>
-      <TopBar />
+      <TopBar
+        showProfile={true}
+        profile={{
+          name: displayName,
+        }}
+      />
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
         <Text style={styles.heading}>DAILY CHECK-IN</Text>
         <Text style={styles.subheading}>How was today?</Text>

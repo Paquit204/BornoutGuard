@@ -106,9 +106,16 @@ export default function DashboardScreen() {
     ? RISK_COLORS[latestCheckin.risk_level]
     : '#A8A098';
 
+  const displayName = profile?.full_name || profile?.email?.split('@')[0] || 'Student';
+
   return (
     <View style={styles.root}>
-      <TopBar />
+      <TopBar
+        showProfile={true}
+        profile={{
+          name: displayName,
+        }}
+      />
       <ScrollView
         style={styles.container}
         contentContainerStyle={styles.content}

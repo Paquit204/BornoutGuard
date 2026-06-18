@@ -32,7 +32,7 @@ export default function LoginScreen() {
     if (error) {
       Alert.alert('Login Failed', error.message);
     } else {
-      router.replace('/dashboard');
+      router.replace('/welcome');
     }
   };
 
