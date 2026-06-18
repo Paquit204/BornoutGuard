@@ -1,3 +1,4 @@
+ // components/LoadingSpinner.tsx
 import React from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
@@ -8,7 +9,7 @@ interface Props {
 export default function LoadingSpinner({ message = 'Loading...' }: Props) {
   return (
     <View style={styles.container}>
-      <ActivityIndicator size="large" color="#3B82F6" />
+      <ActivityIndicator size="large" color="#4ADE80" />
       <Text style={styles.text}>{message}</Text>
     </View>
   );
@@ -19,11 +20,11 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#000000',
+    backgroundColor: '#0A1A0F',
   },
   text: {
     marginTop: 12,
-    color: '#9CA3AF',
+    color: '#8FB38F',
     fontSize: 14,
   },
 });

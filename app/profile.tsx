@@ -1,26 +1,34 @@
-import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+ import { useRouter } from 'expo-router';
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import CustomButton from '../components/CustomButton';
-import GlassCard from '../components/GlassCard';
+import BottomNav from '../components/BottomNav';
+import TopBar from '../components/TopBar';
 import { useAuth } from '../hooks/useAuth';
-
-const RISK_GUIDE = [
-  { level: 'Low (0–33)', color: '#10B981', desc: 'You\'re managing well. Keep your healthy habits going.' },
-  { level: 'Moderate (34–66)', color: '#F59E0B', desc: 'Some stress is present. Consider adjusting your schedule.' },
-  { level: 'High (67–100)', color: '#EF4444', desc: 'Burnout risk is high. Take immediate steps to reduce pressure.' },
-];
-
-const FEATURE_GUIDE = [
-  { icon: '📝', title: 'Daily Check-In', desc: 'Log your study hours, sleep, assignments, stress and mood each day.' },
-  { icon: '📊', title: 'Analytics', desc: 'View 14-day trends, sleep vs study comparisons, and risk distribution.' },
-  { icon: '🧠', title: 'Burnout Score', desc: 'A 0–100 score calculated from stress, sleep, study, and workload.' },
-  { icon: '💡', title: 'Recommendations', desc: 'Personalized tips based on your current burnout risk level.' },
-];
+import { supabase } from '../lib/supabase';
 
 export default function ProfileScreen() {
   const { profile, signOut } = useAuth();
   const router = useRouter();
+
+  const handleClearData = () => {
+    Alert.alert(
+      'Clear all check-ins',
+      'This will permanently delete all your daily check-in data. Are you sure?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Clear',
+          style: 'destructive',
+          onPress: async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+              await supabase.from('daily_checkins').delete().eq('user_id', user.id);
+              Alert.alert('Data cleared', 'All check-ins have been removed.');
+            }
+          },
+        },
+      ]
+    );
+  };
 
   const handleSignOut = () => {
     Alert.alert(
@@ -40,151 +48,133 @@ export default function ProfileScreen() {
     );
   };
 
-  const initials = profile?.full_name
-    ? profile.full_name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
-    : '??';
-
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* Header */}
-      <LinearGradient colors={['#1E1040', '#000000']} style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <Text style={styles.backText}>← Back</Text>
-        </TouchableOpacity>
-        <View style={styles.avatarContainer}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{initials}</Text>
-          </View>
-          <Text style={styles.name}>{profile?.full_name || 'Student'}</Text>
-          <Text style={styles.email}>{profile?.email}</Text>
+    <View style={styles.root}>
+      <TopBar />
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <Text style={styles.heading}>ABOUT THIS APP</Text>
+        <Text style={styles.appName}>BurnoutGuard</Text>
+        <Text style={styles.description}>
+          A daily companion for student wellbeing – built quiet, fast, and on-device.
+        </Text>
+        <View style={styles.infoBox}>
+          <Text style={styles.infoLabel}>You</Text>
+          <Text style={styles.infoValue}>Local profile - no account needed</Text>
         </View>
-      </LinearGradient>
 
-      <View style={styles.body}>
-        {/* Account Info */}
-        <Text style={styles.sectionTitle}>Account Information</Text>
-        <GlassCard>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Full Name</Text>
-            <Text style={styles.infoValue}>{profile?.full_name || 'Not set'}</Text>
-          </View>
-          <View style={styles.divider} />
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Email</Text>
-            <Text style={styles.infoValue}>{profile?.email}</Text>
-          </View>
-          <View style={styles.divider} />
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Member Since</Text>
-            <Text style={styles.infoValue}>
-              {profile?.created_at
-                ? new Date(profile.created_at).toLocaleDateString()
-                : '—'}
-            </Text>
-          </View>
-        </GlassCard>
+        <Text style={styles.sectionTitle}>HOW THE SCORE WORKS</Text>
+        <Text style={styles.sectionDesc}>
+          Each day's check-in is weighed across four factors. The result is a single number from 0 to 100.
+        </Text>
 
-        {/* How It Works */}
-        <Text style={styles.sectionTitle}>How BurnoutGuard Works</Text>
-        <GlassCard>
-          <Text style={styles.algorithmText}>
-            Your Burnout Score (0–100) is calculated using:{'\n\n'}
-            • <Text style={styles.bold}>Stress Level</Text> — 30% weight{'\n'}
-            • <Text style={styles.bold}>Sleep Deprivation</Text> — 25% weight{'\n'}
-            • <Text style={styles.bold}>Excessive Study</Text> — 25% weight{'\n'}
-            • <Text style={styles.bold}>Workload Pressure</Text> — 20% weight
-          </Text>
-        </GlassCard>
+        <View style={styles.weightRow}>
+          <Text style={styles.weightLabel}>Stress</Text>
+          <Text style={styles.weightDetail}>1-10 scale - 0-100</Text>
+        </View>
+        <View style={styles.weightRow}>
+          <Text style={styles.weightLabel}>Sleep</Text>
+          <Text style={styles.weightDetail}>7-9 hours - less is worse</Text>
+        </View>
+        <View style={styles.weightRow}>
+          <Text style={styles.weightLabel}>Study</Text>
+          <Text style={styles.weightDetail}>5-6 hours - studies are better</Text>
+        </View>
+        <View style={styles.weightRow}>
+          <Text style={styles.weightLabel}>Workload</Text>
+          <Text style={styles.weightDetail}>Open assignments count</Text>
+        </View>
 
-        {/* Risk Guide */}
-        <Text style={styles.sectionTitle}>Risk Level Guide</Text>
-        {RISK_GUIDE.map((g) => (
-          <GlassCard key={g.level} style={styles.riskCard}>
-            <View style={styles.riskHeader}>
-              <View style={[styles.riskDot, { backgroundColor: g.color }]} />
-              <Text style={[styles.riskLevel, { color: g.color }]}>{g.level}</Text>
-            </View>
-            <Text style={styles.riskDesc}>{g.desc}</Text>
-          </GlassCard>
-        ))}
+        <Text style={styles.sectionTitle}>RISK LEVELS</Text>
+        <View style={styles.riskRow}>
+          <View style={[styles.riskDot, { backgroundColor: '#2D6A4F' }]} />
+          <Text style={styles.riskLabel}>Low 0-33</Text>
+          <Text style={styles.riskDesc}>Healthy balance maintained.</Text>
+        </View>
+        <View style={styles.riskRow}>
+          <View style={[styles.riskDot, { backgroundColor: '#E8A838' }]} />
+          <Text style={styles.riskLabel}>Moderate 34-66</Text>
+          <Text style={styles.riskDesc}>Watch for warning signs.</Text>
+        </View>
+        <View style={styles.riskRow}>
+          <View style={[styles.riskDot, { backgroundColor: '#D9534F' }]} />
+          <Text style={styles.riskLabel}>High 67-100</Text>
+          <Text style={styles.riskDesc}>Immediate action recommended.</Text>
+        </View>
 
-        {/* Feature Guide */}
-        <Text style={styles.sectionTitle}>Feature Guide</Text>
-        {FEATURE_GUIDE.map((f) => (
-          <GlassCard key={f.title} style={styles.featureCard}>
-            <Text style={styles.featureIcon}>{f.icon}</Text>
-            <View style={styles.featureContent}>
-              <Text style={styles.featureTitle}>{f.title}</Text>
-              <Text style={styles.featureDesc}>{f.desc}</Text>
-            </View>
-          </GlassCard>
-        ))}
+        <Text style={styles.sectionTitle}>DATA</Text>
+        <TouchableOpacity style={styles.clearButton} onPress={handleClearData}>
+          <Text style={styles.clearButtonText}>Clear all check-ins</Text>
+        </TouchableOpacity>
+        <Text style={styles.localOnly}>Local only</Text>
 
-        {/* Sign Out */}
-        <CustomButton
-          title="Sign Out"
-          onPress={handleSignOut}
-          variant="danger"
-          style={styles.signOutBtn}
-        />
+        <Text style={styles.footer}>
+          BurnoutGuard is an educational wellness tool, not a medical device. If you're struggling, please reach out to a counselor, friend, or family member.
+        </Text>
+        <Text style={styles.version}>V1.0 - BUILT WITH CARE</Text>
 
-        <Text style={styles.version}>BurnoutGuard v1.0.0 · Built with ❤️ for Students</Text>
-      </View>
-    </ScrollView>
+        <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
+          <Text style={styles.signOutText}>Sign Out</Text>
+        </TouchableOpacity>
+      </ScrollView>
+      <BottomNav />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000000' },
-  content: { paddingBottom: 40 },
-  header: {
-    paddingTop: 60,
-    paddingBottom: 32,
-    paddingHorizontal: 24,
-  },
-  backBtn: { marginBottom: 20 },
-  backText: { color: '#3B82F6', fontSize: 15 },
-  avatarContainer: { alignItems: 'center', gap: 8 },
-  avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#3B82F6',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  avatarText: { color: '#FFFFFF', fontSize: 28, fontWeight: '700' },
-  name: { color: '#FFFFFF', fontSize: 22, fontWeight: '700' },
-  email: { color: '#9CA3AF', fontSize: 13 },
-  body: { padding: 20, gap: 12 },
-  sectionTitle: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-    marginTop: 8,
-  },
-  infoRow: {
+  root: { flex: 1, backgroundColor: '#F8F5F0' },
+  container: { flex: 1 },
+  content: { paddingHorizontal: 20, paddingBottom: 20 },
+  heading: { fontSize: 12, fontWeight: '600', color: '#5C6B6A', letterSpacing: 0.5, marginTop: 8 },
+  appName: { fontSize: 28, fontWeight: '800', color: '#1B4332', marginTop: 2 },
+  description: { fontSize: 14, color: '#4A5A58', marginTop: 4, marginBottom: 12 },
+  infoBox: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 4,
+    backgroundColor: '#FFFFFF',
+    padding: 12,
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+    marginBottom: 16,
   },
-  infoLabel: { color: '#9CA3AF', fontSize: 13 },
-  infoValue: { color: '#FFFFFF', fontSize: 13, fontWeight: '500', maxWidth: '60%', textAlign: 'right' },
-  divider: { height: 1, backgroundColor: 'rgba(255,255,255,0.06)', marginVertical: 10 },
-  algorithmText: { color: '#D1D5DB', fontSize: 14, lineHeight: 22 },
-  bold: { fontWeight: '700', color: '#FFFFFF' },
-  riskCard: { marginBottom: 2 },
-  riskHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
-  riskDot: { width: 10, height: 10, borderRadius: 5 },
-  riskLevel: { fontSize: 14, fontWeight: '600' },
-  riskDesc: { color: '#9CA3AF', fontSize: 13, lineHeight: 20 },
-  featureCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
-  featureIcon: { fontSize: 24, marginTop: 2 },
-  featureContent: { flex: 1 },
-  featureTitle: { color: '#FFFFFF', fontSize: 14, fontWeight: '600', marginBottom: 4 },
-  featureDesc: { color: '#9CA3AF', fontSize: 13, lineHeight: 20 },
-  signOutBtn: { marginTop: 12 },
-  version: { color: '#374151', fontSize: 11, textAlign: 'center', marginTop: 16 },
+  infoLabel: { fontWeight: '600', color: '#1B4332' },
+  infoValue: { color: '#5C6B6A' },
+  sectionTitle: { fontSize: 14, fontWeight: '700', color: '#1B4332', marginTop: 16, marginBottom: 4 },
+  sectionDesc: { fontSize: 13, color: '#5C6B6A', marginBottom: 8 },
+  weightRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E0D8',
+  },
+  weightLabel: { flex: 1, fontWeight: '500', color: '#1B4332' },
+  weightDetail: { flex: 2, color: '#5C6B6A' },
+  riskRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 6 },
+  riskDot: { width: 10, height: 10, borderRadius: 5, marginRight: 8 },
+  riskLabel: { fontWeight: '600', color: '#1B4332', width: 90 },
+  riskDesc: { color: '#5C6B6A', fontSize: 13, flex: 1 },
+  clearButton: {
+    backgroundColor: '#D9534F',
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  clearButtonText: { color: '#FFFFFF', fontWeight: '600' },
+  localOnly: { fontSize: 12, color: '#A8A098', textAlign: 'center', marginTop: 4 },
+  footer: { fontSize: 13, color: '#5C6B6A', marginTop: 20, lineHeight: 20, fontStyle: 'italic' },
+  version: { fontSize: 12, color: '#A8A098', textAlign: 'center', marginTop: 8 },
+  signOutButton: {
+    marginTop: 24,
+    backgroundColor: '#E5E0D8',
+    padding: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  signOutText: { color: '#1B4332', fontWeight: '600' },
 });

@@ -1,16 +1,15 @@
-import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import CustomButton from '../components/CustomButton';
 import { supabase } from '../lib/supabase';
@@ -42,15 +41,10 @@ export default function LoginScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <LinearGradient
-        colors={['#0F172A', '#000000']}
-        style={StyleSheet.absoluteFill}
-      />
       <ScrollView
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Header */}
         <View style={styles.header}>
           <View style={styles.iconBox}>
             <Text style={styles.icon}>🧠</Text>
@@ -59,14 +53,13 @@ export default function LoginScreen() {
           <Text style={styles.subtitle}>Sign in to monitor your wellness</Text>
         </View>
 
-        {/* Form */}
         <View style={styles.form}>
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Email Address</Text>
             <TextInput
               style={styles.input}
               placeholder="you@university.edu"
-              placeholderTextColor="#4B5563"
+              placeholderTextColor="#A8A098"
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
@@ -80,7 +73,7 @@ export default function LoginScreen() {
             <TextInput
               style={styles.input}
               placeholder="••••••••"
-              placeholderTextColor="#4B5563"
+              placeholderTextColor="#A8A098"
               value={password}
               onChangeText={setPassword}
               secureTextEntry
@@ -108,34 +101,37 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000000' },
+  container: { flex: 1, backgroundColor: '#F8F5F0' },
   scroll: { flexGrow: 1, justifyContent: 'center', padding: 24 },
   header: { alignItems: 'center', marginBottom: 40 },
   iconBox: {
     width: 80,
     height: 80,
     borderRadius: 20,
-    backgroundColor: '#1F2937',
+    backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(59,130,246,0.3)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
   },
   icon: { fontSize: 36 },
-  title: { fontSize: 28, fontWeight: '700', color: '#FFFFFF', marginBottom: 6 },
-  subtitle: { fontSize: 14, color: '#6B7280' },
+  title: { fontSize: 28, fontWeight: '700', color: '#1B4332', marginBottom: 6 },
+  subtitle: { fontSize: 14, color: '#5C6B6A' },
   form: { gap: 16 },
   inputGroup: { gap: 6 },
-  label: { color: '#9CA3AF', fontSize: 13, fontWeight: '500' },
+  label: { color: '#1B4332', fontSize: 13, fontWeight: '500' },
   input: {
-    backgroundColor: '#1F2937',
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 14,
-    color: '#FFFFFF',
+    color: '#1B4332',
     fontSize: 15,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: '#E5E0D8',
   },
   button: { marginTop: 8 },
   footer: {
@@ -143,6 +139,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: 16,
   },
-  footerText: { color: '#6B7280', fontSize: 14 },
-  link: { color: '#3B82F6', fontSize: 14, fontWeight: '600' },
+  footerText: { color: '#5C6B6A', fontSize: 14 },
+  link: { color: '#2D6A4F', fontSize: 14, fontWeight: '600' },
 });

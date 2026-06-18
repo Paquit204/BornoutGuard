@@ -1,5 +1,4 @@
- import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
   Alert,
@@ -24,7 +23,6 @@ export default function SignupScreen() {
   const router = useRouter();
 
   const handleSignup = async () => {
-    // --- Validation ---
     if (!fullName || !email || !password || !confirmPassword) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
@@ -49,13 +47,10 @@ export default function SignupScreen() {
         },
       });
 
-      // Log the full response for debugging
       console.log('🔐 Signup response:', { data, error });
 
       if (error) {
-        // --- Specific error handling ---
         let message = error.message;
-        // Map common Supabase errors to user-friendly messages
         if (error.message.includes('User already registered')) {
           message = 'This email is already registered. Please sign in instead.';
         } else if (error.message.includes('Email provider is disabled')) {
@@ -69,13 +64,11 @@ export default function SignupScreen() {
         } else if (error.message.includes('rate limit')) {
           message = 'Too many attempts. Please wait a moment and try again.';
         } else {
-          // Fallback: show the raw error message (but still helpful)
           message = `Sign-up failed: ${error.message}`;
         }
 
         Alert.alert('Signup Failed', message);
       } else {
-        // --- Success ---
         Alert.alert(
           'Account Created!',
           'Welcome to BurnoutGuard. You can now sign in.',
@@ -83,7 +76,6 @@ export default function SignupScreen() {
         );
       }
     } catch (err: any) {
-      // Catch any unexpected error (network, etc.)
       console.error('🔥 Unexpected signup error:', err);
       Alert.alert(
         'Signup Error',
@@ -99,10 +91,6 @@ export default function SignupScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <LinearGradient
-        colors={['#0F172A', '#000000']}
-        style={StyleSheet.absoluteFill}
-      />
       <ScrollView
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
@@ -118,7 +106,7 @@ export default function SignupScreen() {
             <TextInput
               style={styles.input}
               placeholder="Your name"
-              placeholderTextColor="#4B5563"
+              placeholderTextColor="#A8A098"
               value={fullName}
               onChangeText={setFullName}
               autoCapitalize="words"
@@ -130,7 +118,7 @@ export default function SignupScreen() {
             <TextInput
               style={styles.input}
               placeholder="you@university.edu"
-              placeholderTextColor="#4B5563"
+              placeholderTextColor="#A8A098"
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
@@ -143,7 +131,7 @@ export default function SignupScreen() {
             <TextInput
               style={styles.input}
               placeholder="Min. 6 characters"
-              placeholderTextColor="#4B5563"
+              placeholderTextColor="#A8A098"
               value={password}
               onChangeText={setPassword}
               secureTextEntry
@@ -155,7 +143,7 @@ export default function SignupScreen() {
             <TextInput
               style={styles.input}
               placeholder="Repeat your password"
-              placeholderTextColor="#4B5563"
+              placeholderTextColor="#A8A098"
               value={confirmPassword}
               onChangeText={setConfirmPassword}
               secureTextEntry
@@ -182,22 +170,22 @@ export default function SignupScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000000' },
+  container: { flex: 1, backgroundColor: '#F8F5F0' },
   scroll: { flexGrow: 1, justifyContent: 'center', padding: 24 },
   header: { alignItems: 'center', marginBottom: 32 },
-  title: { fontSize: 28, fontWeight: '700', color: '#FFFFFF', marginBottom: 6 },
-  subtitle: { fontSize: 14, color: '#6B7280' },
+  title: { fontSize: 28, fontWeight: '700', color: '#1B4332', marginBottom: 6 },
+  subtitle: { fontSize: 14, color: '#5C6B6A' },
   form: { gap: 14 },
   inputGroup: { gap: 6 },
-  label: { color: '#9CA3AF', fontSize: 13, fontWeight: '500' },
+  label: { color: '#1B4332', fontSize: 13, fontWeight: '500' },
   input: {
-    backgroundColor: '#1F2937',
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 14,
-    color: '#FFFFFF',
+    color: '#1B4332',
     fontSize: 15,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: '#E5E0D8',
   },
   button: { marginTop: 8 },
   footer: {
@@ -205,6 +193,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: 16,
   },
-  footerText: { color: '#6B7280', fontSize: 14 },
-  link: { color: '#3B82F6', fontSize: 14, fontWeight: '600' },
+  footerText: { color: '#5C6B6A', fontSize: 14 },
+  link: { color: '#2D6A4F', fontSize: 14, fontWeight: '600' },
 });

@@ -1,5 +1,4 @@
- import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+ import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   RefreshControl,
@@ -9,29 +8,30 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import Animated, {
+import {
   useAnimatedStyle,
   useSharedValue,
   withDelay,
   withTiming,
 } from 'react-native-reanimated';
-import GlassCard from '../components/GlassCard';
+import BottomNav from '../components/BottomNav';
 import LoadingSpinner from '../components/LoadingSpinner';
-import RecommendationCard from '../components/RecommendationCard';
+import TopBar from '../components/TopBar';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { DailyCheckin } from '../types/database';
 
 const RISK_COLORS = {
-  Low: '#10B981',
-  Moderate: '#F59E0B',
-  High: '#EF4444',
+  Low: '#2D6A4F',
+  Moderate: '#E8A838',
+  High: '#D9534F',
 };
 
 export default function DashboardScreen() {
   const { profile, loading: authLoading } = useAuth();
   const [latestCheckin, setLatestCheckin] = useState<DailyCheckin | null>(null);
   const [weeklySummary, setWeeklySummary] = useState({ count: 0, avgScore: 0 });
+  const [weeklyAverages, setWeeklyAverages] = useState({ sleep: 0, study: 0, stress: 0 });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const router = useRouter();
@@ -45,17 +45,14 @@ export default function DashboardScreen() {
   }));
 
   const fetchData = useCallback(async () => {
-    // 1. Check authenticated user
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      // No user → clear session and go to login
       await supabase.auth.signOut();
-      setLoading(false);          // hide spinner
+      setLoading(false);
       router.replace('/login');
       return;
     }
 
-    // 2. Fetch latest check-in
     const { data: latest } = await supabase
       .from('daily_checkins')
       .select('*')
@@ -66,21 +63,28 @@ export default function DashboardScreen() {
 
     if (latest) setLatestCheckin(latest);
 
-    // 3. Fetch last 7 days summary
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     const { data: weekly } = await supabase
       .from('daily_checkins')
-      .select('burnout_score')
+      .select('burnout_score, sleep_hours, study_hours, stress_level')
       .eq('user_id', user.id)
       .gte('created_at', sevenDaysAgo.toISOString());
 
     if (weekly && weekly.length > 0) {
-      const avg = weekly.reduce((sum, c) => sum + c.burnout_score, 0) / weekly.length;
-      setWeeklySummary({ count: weekly.length, avgScore: Math.round(avg) });
+      const avgScore = weekly.reduce((s, c) => s + c.burnout_score, 0) / weekly.length;
+      setWeeklySummary({ count: weekly.length, avgScore: Math.round(avgScore) });
+
+      const avgSleep = weekly.reduce((s, c) => s + c.sleep_hours, 0) / weekly.length;
+      const avgStudy = weekly.reduce((s, c) => s + c.study_hours, 0) / weekly.length;
+      const avgStress = weekly.reduce((s, c) => s + c.stress_level, 0) / weekly.length;
+      setWeeklyAverages({
+        sleep: Math.round(avgSleep * 10) / 10,
+        study: Math.round(avgStudy * 10) / 10,
+        stress: Math.round(avgStress * 10) / 10,
+      });
     }
 
-    // 4. All done – hide spinner and animate
     setLoading(false);
     scoreOpacity.value = withDelay(100, withTiming(1, { duration: 600 }));
     cardSlide.value = withDelay(100, withTiming(0, { duration: 600 }));
@@ -100,268 +104,170 @@ export default function DashboardScreen() {
 
   const riskColor = latestCheckin
     ? RISK_COLORS[latestCheckin.risk_level]
-    : '#6B7280';
-
-  const recommendations: string[] = latestCheckin
-    ? getQuickRecs(latestCheckin.risk_level)
-    : ['👋 Complete your first check-in to see recommendations!'];
+    : '#A8A098';
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#3B82F6" />
-      }
-    >
-      {/* Header */}
-      <LinearGradient
-        colors={['#1E3A5F', '#000000']}
-        style={styles.header}
+    <View style={styles.root}>
+      <TopBar />
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#2D6A4F" />
+        }
       >
-        <View style={styles.headerContent}>
-          <View>
-            <Text style={styles.greeting}>Good day,</Text>
-            <Text style={styles.name}>
-              {profile?.full_name || profile?.email?.split('@')[0] || 'Student'} 👋
+        <Text style={styles.greeting}>Hello there.</Text>
+        <Text style={styles.greetingSub}>Two-minute check-in, then we’ll show you where you stand.</Text>
+
+        <View style={styles.scoreCard}>
+          <Text style={styles.cardLabel}>MOST RECENT SCORE</Text>
+          <View style={styles.scoreRow}>
+            <Text style={[styles.scoreValue, { color: riskColor }]}>
+              {latestCheckin ? Math.round(latestCheckin.burnout_score) : '--'}
             </Text>
+            <Text style={styles.scoreMax}>/ 100</Text>
           </View>
-          <TouchableOpacity
-            style={styles.profileButton}
-            onPress={() => router.push('/profile')}
-          >
-            <Text style={styles.profileEmoji}>👤</Text>
-          </TouchableOpacity>
-        </View>
-      </LinearGradient>
-
-      <Animated.View style={[styles.cardsContainer, scoreStyle]}>
-        {/* Burnout Score Card */}
-        <GlassCard style={styles.scoreCard}>
-          <Text style={styles.cardLabel}>Today's Burnout Score</Text>
-          {latestCheckin ? (
-            <>
-              <Text style={[styles.scoreValue, { color: riskColor }]}>
-                {Math.round(latestCheckin.burnout_score)}
-              </Text>
-              <Text style={styles.scoreMax}>/ 100</Text>
-              <View style={[styles.riskBadge, { backgroundColor: riskColor + '25' }]}>
-                <View style={[styles.riskDot, { backgroundColor: riskColor }]} />
-                <Text style={[styles.riskText, { color: riskColor }]}>
-                  {latestCheckin.risk_level} Risk
-                </Text>
-              </View>
-              {/* Progress bar */}
-              <View style={styles.progressBg}>
-                <View
-                  style={[
-                    styles.progressFill,
-                    {
-                      width: `${latestCheckin.burnout_score}%`,
-                      backgroundColor: riskColor,
-                    },
-                  ]}
-                />
-              </View>
-            </>
-          ) : (
-            <View style={styles.emptyScore}>
-              <Text style={styles.emptyScoreText}>No check-in yet today</Text>
-              <Text style={styles.emptyScoreSub}>Tap below to start</Text>
-            </View>
-          )}
-        </GlassCard>
-
-        {/* Stats Row */}
-        <View style={styles.statsRow}>
-          <GlassCard style={styles.statCard}>
-            <Text style={styles.statValue}>{weeklySummary.count}</Text>
-            <Text style={styles.statLabel}>This Week</Text>
-          </GlassCard>
-          <GlassCard style={styles.statCard}>
-            <Text style={styles.statValue}>{weeklySummary.avgScore || '--'}</Text>
-            <Text style={styles.statLabel}>Avg Score</Text>
-          </GlassCard>
-          <GlassCard style={styles.statCard}>
-            <Text style={styles.statValue}>
-              {latestCheckin?.mood || '--'}
+          <View style={styles.riskBadge}>
+            <View style={[styles.riskDot, { backgroundColor: riskColor }]} />
+            <Text style={[styles.riskText, { color: riskColor }]}>
+              {latestCheckin ? `${latestCheckin.risk_level} risk` : 'No data'}
             </Text>
-            <Text style={styles.statLabel}>Mood</Text>
-          </GlassCard>
+            {latestCheckin && (
+              <Text style={styles.riskSub}>· Healthy balance maintained.</Text>
+            )}
+          </View>
+          <View style={styles.progressBg}>
+            <View
+              style={[
+                styles.progressFill,
+                {
+                  width: latestCheckin ? `${Math.min(latestCheckin.burnout_score, 100)}%` : '0%',
+                  backgroundColor: riskColor,
+                },
+              ]}
+            />
+          </View>
+          <View style={styles.progressLabels}>
+            <Text style={styles.progressLabel}>0 - LOW</Text>
+            <Text style={styles.progressLabel}>33</Text>
+            <Text style={styles.progressLabel}>66</Text>
+            <Text style={styles.progressLabel}>100 - HIGH</Text>
+          </View>
         </View>
 
-        {/* Quick Actions */}
-        <Text style={styles.sectionTitle}>Quick Actions</Text>
-        <View style={styles.actionsRow}>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => router.push('/checkin')}
-          >
-            <LinearGradient
-              colors={['#2563EB', '#3B82F6']}
-              style={styles.actionGradient}
-            >
-              <Text style={styles.actionEmoji}>📝</Text>
-              <Text style={styles.actionText}>Daily Check-In</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => router.push('/analytics')}
-          >
-            <LinearGradient
-              colors={['#065F46', '#10B981']}
-              style={styles.actionGradient}
-            >
-              <Text style={styles.actionEmoji}>📊</Text>
-              <Text style={styles.actionText}>Analytics</Text>
-            </LinearGradient>
-          </TouchableOpacity>
+        <View style={styles.weeklyCard}>
+          <Text style={styles.weeklyTitle}>THIS WEEK, ON AVERAGE</Text>
+          <View style={styles.weeklyRow}>
+            <View style={styles.weeklyItem}>
+              <Text style={styles.weeklyValue}>{weeklyAverages.sleep}h</Text>
+              <Text style={styles.weeklyLabel}>SLEEP</Text>
+            </View>
+            <View style={styles.weeklyItem}>
+              <Text style={styles.weeklyValue}>{weeklyAverages.study}h</Text>
+              <Text style={styles.weeklyLabel}>STUDY</Text>
+            </View>
+            <View style={styles.weeklyItem}>
+              <Text style={styles.weeklyValue}>{weeklyAverages.stress}/10</Text>
+              <Text style={styles.weeklyLabel}>STRESS</Text>
+            </View>
+          </View>
         </View>
 
-        {/* Recommendations */}
-        <Text style={styles.sectionTitle}>Recommendations</Text>
-        {recommendations.map((rec, i) => (
-          <RecommendationCard key={i} recommendation={rec} index={i} />
-        ))}
+        <View style={styles.motivationCard}>
+          <Text style={styles.motivationTitle}>FOR YOU, RIGHT NOW</Text>
+          <Text style={styles.motivationHeading}>KEEP GOING</Text>
+          <Text style={styles.motivationText}>
+            You're in a good rhythm{'\n'}
+            Protect what's working: same sleep window, same study blocks, same boundaries.
+          </Text>
+        </View>
 
-        {/* Last Check-In Details */}
-        {latestCheckin && (
-          <>
-            <Text style={styles.sectionTitle}>Last Check-In Details</Text>
-            <GlassCard>
-              <View style={styles.detailGrid}>
-                <View style={styles.detailItem}>
-                  <Text style={styles.detailEmoji}>📚</Text>
-                  <Text style={styles.detailValue}>{latestCheckin.study_hours}h</Text>
-                  <Text style={styles.detailLabel}>Study</Text>
-                </View>
-                <View style={styles.detailItem}>
-                  <Text style={styles.detailEmoji}>😴</Text>
-                  <Text style={styles.detailValue}>{latestCheckin.sleep_hours}h</Text>
-                  <Text style={styles.detailLabel}>Sleep</Text>
-                </View>
-                <View style={styles.detailItem}>
-                  <Text style={styles.detailEmoji}>📋</Text>
-                  <Text style={styles.detailValue}>{latestCheckin.assignments}</Text>
-                  <Text style={styles.detailLabel}>Tasks</Text>
-                </View>
-                <View style={styles.detailItem}>
-                  <Text style={styles.detailEmoji}>😰</Text>
-                  <Text style={styles.detailValue}>{latestCheckin.stress_level}/10</Text>
-                  <Text style={styles.detailLabel}>Stress</Text>
-                </View>
-              </View>
-            </GlassCard>
-          </>
-        )}
-      </Animated.View>
-    </ScrollView>
+        <TouchableOpacity style={styles.startButton} onPress={() => router.push('/checkin')}>
+          <Text style={styles.startButtonText}>START</Text>
+          <Text style={styles.startButtonSub}>Today's check-in</Text>
+        </TouchableOpacity>
+      </ScrollView>
+      <BottomNav />
+    </View>
   );
 }
 
-function getQuickRecs(risk: string): string[] {
-  const recs = {
-    Low: [
-      '✅ You\'re doing well! Maintain your healthy habits.',
-      '📝 Plan ahead to prevent future stress spikes.',
-      '👥 Help a classmate who might be struggling.',
-    ],
-    Moderate: [
-      '⏰ Schedule structured breaks between study sessions.',
-      '🧘 Practice 5-minute breathing exercises twice a day.',
-      '💤 Prioritize getting 7-8 hours of sleep tonight.',
-    ],
-    High: [
-      '🚨 Please reach out to a counselor or trusted adult.',
-      '🏃 A 20-minute walk can significantly lower stress.',
-      '📵 Take a digital detox for 1 hour before bed.',
-    ],
-  };
-  return recs[risk as keyof typeof recs] || [];
-}
-
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000000' },
-  content: { paddingBottom: 32 },
-  header: {
-    paddingTop: 60,
-    paddingBottom: 32,
-    paddingHorizontal: 24,
+  root: { flex: 1, backgroundColor: '#F8F5F0' },
+  container: { flex: 1 },
+  content: { paddingHorizontal: 20, paddingBottom: 20 },
+  greeting: { fontSize: 18, fontWeight: '600', color: '#1B4332', marginBottom: 4 },
+  greetingSub: { fontSize: 14, color: '#5C6B6A', marginBottom: 16 },
+  scoreCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
+    marginBottom: 16,
   },
-  headerContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  greeting: { color: '#9CA3AF', fontSize: 14 },
-  name: { color: '#FFFFFF', fontSize: 22, fontWeight: '700', marginTop: 2 },
-  profileButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#1F2937',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(59,130,246,0.3)',
-  },
-  profileEmoji: { fontSize: 20 },
-  cardsContainer: { padding: 20, gap: 16 },
-  scoreCard: { alignItems: 'center', paddingVertical: 24 },
-  cardLabel: { color: '#9CA3AF', fontSize: 13, marginBottom: 8 },
-  scoreValue: { fontSize: 72, fontWeight: '800', lineHeight: 80 },
-  scoreMax: { color: '#6B7280', fontSize: 16, marginTop: -4 },
-  riskBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 20,
-    marginTop: 12,
-    gap: 6,
-  },
-  riskDot: { width: 8, height: 8, borderRadius: 4 },
-  riskText: { fontSize: 13, fontWeight: '600' },
+  cardLabel: { fontSize: 12, fontWeight: '600', color: '#5C6B6A', letterSpacing: 0.5 },
+  scoreRow: { flexDirection: 'row', alignItems: 'baseline', marginTop: 4 },
+  scoreValue: { fontSize: 48, fontWeight: '800' },
+  scoreMax: { fontSize: 16, color: '#A8A098', marginLeft: 4 },
+  riskBadge: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
+  riskDot: { width: 8, height: 8, borderRadius: 4, marginRight: 6 },
+  riskText: { fontSize: 14, fontWeight: '600' },
+  riskSub: { fontSize: 14, color: '#5C6B6A', marginLeft: 4 },
   progressBg: {
-    width: '80%',
     height: 6,
-    backgroundColor: '#374151',
+    backgroundColor: '#E5E0D8',
     borderRadius: 3,
     marginTop: 16,
     overflow: 'hidden',
   },
   progressFill: { height: '100%', borderRadius: 3 },
-  emptyScore: { alignItems: 'center', paddingVertical: 16 },
-  emptyScoreText: { color: '#9CA3AF', fontSize: 16 },
-  emptyScoreSub: { color: '#6B7280', fontSize: 13, marginTop: 4 },
-  statsRow: { flexDirection: 'row', gap: 10 },
-  statCard: { flex: 1, alignItems: 'center', paddingVertical: 16 },
-  statValue: { color: '#FFFFFF', fontSize: 22, fontWeight: '700' },
-  statLabel: { color: '#6B7280', fontSize: 11, marginTop: 4 },
-  sectionTitle: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
+  progressLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginTop: 4,
   },
-  actionsRow: { flexDirection: 'row', gap: 12 },
-  actionButton: { flex: 1, borderRadius: 14, overflow: 'hidden' },
-  actionGradient: {
-    paddingVertical: 20,
+  progressLabel: { fontSize: 10, color: '#A8A098' },
+  weeklyCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
+    marginBottom: 16,
+  },
+  weeklyTitle: { fontSize: 12, fontWeight: '600', color: '#5C6B6A', letterSpacing: 0.5 },
+  weeklyRow: { flexDirection: 'row', justifyContent: 'space-around', marginTop: 8 },
+  weeklyItem: { alignItems: 'center' },
+  weeklyValue: { fontSize: 20, fontWeight: '700', color: '#1B4332' },
+  weeklyLabel: { fontSize: 12, color: '#5C6B6A', marginTop: 2 },
+  motivationCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
+    marginBottom: 16,
+  },
+  motivationTitle: { fontSize: 12, fontWeight: '600', color: '#5C6B6A', letterSpacing: 0.5 },
+  motivationHeading: { fontSize: 22, fontWeight: '700', color: '#1B4332', marginTop: 4 },
+  motivationText: { fontSize: 14, color: '#4A5A58', marginTop: 4, lineHeight: 20 },
+  startButton: {
+    backgroundColor: '#2D6A4F',
+    borderRadius: 12,
+    paddingVertical: 14,
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
+    marginTop: 4,
   },
-  actionEmoji: { fontSize: 28 },
-  actionText: { color: '#FFFFFF', fontSize: 13, fontWeight: '600' },
-  detailGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  detailItem: { alignItems: 'center', gap: 4 },
-  detailEmoji: { fontSize: 22 },
-  detailValue: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
-  detailLabel: { color: '#6B7280', fontSize: 11 },
+  startButtonText: { fontSize: 16, fontWeight: '700', color: '#FFFFFF', letterSpacing: 0.5 },
+  startButtonSub: { fontSize: 12, color: '#D4E2D0', marginTop: 2 },
 });

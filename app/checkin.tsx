@@ -1,24 +1,24 @@
-import Slider from '@react-native-community/slider';
-import { LinearGradient } from 'expo-linear-gradient';
+ import Slider from '@react-native-community/slider';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-    Alert,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
+import BottomNav from '../components/BottomNav';
 import CustomButton from '../components/CustomButton';
-import GlassCard from '../components/GlassCard';
+import LoadingSpinner from '../components/LoadingSpinner';
+import TopBar from '../components/TopBar';
 import { supabase } from '../lib/supabase';
 import { calculateBurnout } from '../services/burnoutCalculator';
 
 const MOODS = ['😄', '😊', '😐', '😔', '😩'];
-const MOOD_LABELS = ['Great', 'Good', 'Okay', 'Tired', 'Burned'];
+const MOOD_LABELS = ['Happy', 'Neutral', 'Sad', 'Stressed', 'Anxious'];
 
-// Stepper component
 function Stepper({
   value,
   min,
@@ -61,24 +61,24 @@ function Stepper({
 }
 
 const stepperStyles = StyleSheet.create({
-  container: { gap: 8 },
-  label: { color: '#9CA3AF', fontSize: 13, fontWeight: '500' },
+  container: { gap: 4 },
+  label: { fontSize: 14, fontWeight: '500', color: '#1B4332' },
   controls: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
   btn: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: '#374151',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#E5E0D8',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  btnText: { color: '#FFFFFF', fontSize: 22, fontWeight: '300' },
-  value: { color: '#FFFFFF', fontSize: 24, fontWeight: '700' },
-  unit: { color: '#6B7280', fontSize: 14, fontWeight: '400' },
+  btnText: { fontSize: 22, fontWeight: '300', color: '#1B4332' },
+  value: { fontSize: 22, fontWeight: '700', color: '#1B4332' },
+  unit: { fontSize: 14, fontWeight: '400', color: '#5C6B6A' },
 });
 
 export default function CheckinScreen() {
@@ -86,22 +86,19 @@ export default function CheckinScreen() {
   const [sleepHours, setSleepHours] = useState(7);
   const [assignments, setAssignments] = useState(2);
   const [stressLevel, setStressLevel] = useState(5);
-  const [selectedMood, setSelectedMood] = useState(1);
+  const [selectedMood, setSelectedMood] = useState(0);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   const handleSubmit = async () => {
     setLoading(true);
-
     const result = calculateBurnout(stressLevel, sleepHours, studyHours, assignments);
-
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       Alert.alert('Error', 'Not authenticated');
       setLoading(false);
       return;
     }
-
     const { error } = await supabase.from('daily_checkins').insert({
       user_id: user.id,
       study_hours: studyHours,
@@ -112,9 +109,7 @@ export default function CheckinScreen() {
       burnout_score: result.score,
       risk_level: result.risk_level,
     });
-
     setLoading(false);
-
     if (error) {
       Alert.alert('Error', error.message);
     } else {
@@ -124,88 +119,59 @@ export default function CheckinScreen() {
 
   const preview = calculateBurnout(stressLevel, sleepHours, studyHours, assignments);
   const previewColor =
-    preview.risk_level === 'Low'
-      ? '#10B981'
-      : preview.risk_level === 'Moderate'
-      ? '#F59E0B'
-      : '#EF4444';
+    preview.risk_level === 'Low' ? '#2D6A4F' : preview.risk_level === 'Moderate' ? '#E8A838' : '#D9534F';
+
+  if (loading) return <LoadingSpinner message="Saving..." />;
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      keyboardShouldPersistTaps="handled"
-    >
-      {/* Header */}
-      <LinearGradient colors={['#1E3A5F', '#000000']} style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <Text style={styles.backText}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Daily Check-In</Text>
-        <Text style={styles.subtitle}>How are you doing today?</Text>
-      </LinearGradient>
+    <View style={styles.root}>
+      <TopBar />
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <Text style={styles.heading}>DAILY CHECK-IN</Text>
+        <Text style={styles.subheading}>How was today?</Text>
+        <Text style={styles.description}>Five quick fields. Honest answers make the score useful.</Text>
 
-      <View style={styles.formContainer}>
-        {/* Live Preview */}
-        <GlassCard style={styles.previewCard}>
-          <Text style={styles.previewLabel}>Live Burnout Preview</Text>
-          <Text style={[styles.previewScore, { color: previewColor }]}>
-            {preview.score}
-          </Text>
-          <View style={[styles.riskPill, { backgroundColor: previewColor + '20' }]}>
-            <Text style={[styles.riskPillText, { color: previewColor }]}>
-              {preview.risk_level} Risk
-            </Text>
-          </View>
-        </GlassCard>
-
-        {/* Study Hours */}
-        <GlassCard>
+        <View style={styles.field}>
           <Stepper
-            label="📚 Study Hours Today"
+            label="Study hours"
             value={studyHours}
             min={0}
             max={16}
             step={0.5}
-            unit="hrs"
+            unit="h"
             onChange={setStudyHours}
           />
-        </GlassCard>
+          <Text style={styles.hint}>Healthy ≤ 6h</Text>
+        </View>
 
-        {/* Sleep Hours */}
-        <GlassCard>
+        <View style={styles.field}>
           <Stepper
-            label="😴 Sleep Hours Last Night"
+            label="Sleep hours"
             value={sleepHours}
             min={0}
             max={12}
             step={0.5}
-            unit="hrs"
+            unit="h"
             onChange={setSleepHours}
           />
-        </GlassCard>
+          <Text style={styles.hint}>Optimal 7-9h</Text>
+        </View>
 
-        {/* Assignments */}
-        <GlassCard>
+        <View style={styles.field}>
           <Stepper
-            label="📋 Pending Assignments"
+            label="Open assignments"
             value={assignments}
             min={0}
             max={20}
             step={1}
-            unit="tasks"
+            unit=""
             onChange={setAssignments}
           />
-        </GlassCard>
+          <Text style={styles.hint}>Light ≤ 2</Text>
+        </View>
 
-        {/* Stress Level */}
-        <GlassCard>
-          <Text style={styles.sliderLabel}>
-            😰 Stress Level:{' '}
-            <Text style={{ color: '#3B82F6', fontWeight: '700' }}>
-              {stressLevel}/10
-            </Text>
-          </Text>
+        <View style={styles.field}>
+          <Text style={styles.sliderLabel}>Stress level</Text>
           <Slider
             style={styles.slider}
             minimumValue={1}
@@ -213,94 +179,98 @@ export default function CheckinScreen() {
             step={1}
             value={stressLevel}
             onValueChange={setStressLevel}
-            minimumTrackTintColor="#3B82F6"
-            maximumTrackTintColor="#374151"
-            thumbTintColor="#3B82F6"
+            minimumTrackTintColor="#2D6A4F"
+            maximumTrackTintColor="#E5E0D8"
+            thumbTintColor="#2D6A4F"
           />
-          <View style={styles.sliderLabels}>
-            <Text style={styles.sliderEndLabel}>Relaxed</Text>
-            <Text style={styles.sliderEndLabel}>Overwhelmed</Text>
+          <View style={styles.sliderEnds}>
+            <Text style={styles.sliderEnd}>CALM</Text>
+            <Text style={styles.sliderEnd}>OVERWHELMED</Text>
           </View>
-        </GlassCard>
+        </View>
 
-        {/* Mood Selector */}
-        <GlassCard>
-          <Text style={styles.sliderLabel}>😊 How are you feeling?</Text>
+        <View style={styles.field}>
+          <Text style={styles.sliderLabel}>Mood</Text>
           <View style={styles.moodRow}>
             {MOODS.map((emoji, i) => (
               <TouchableOpacity
                 key={i}
-                style={[
-                  styles.moodBtn,
-                  selectedMood === i && styles.moodBtnSelected,
-                ]}
+                style={[styles.moodBtn, selectedMood === i && styles.moodBtnSelected]}
                 onPress={() => setSelectedMood(i)}
               >
                 <Text style={styles.moodEmoji}>{emoji}</Text>
-                <Text style={styles.moodLabel}>{MOOD_LABELS[i]}</Text>
+                <Text style={[styles.moodLabel, selectedMood === i && styles.moodLabelSelected]}>
+                  {MOOD_LABELS[i]}
+                </Text>
               </TouchableOpacity>
             ))}
           </View>
-        </GlassCard>
+        </View>
+
+        <View style={styles.previewCard}>
+          <Text style={styles.previewLabel}>LIVE PREVIEW</Text>
+          <View style={styles.previewRow}>
+            <Text style={[styles.previewScore, { color: previewColor }]}>{preview.score}</Text>
+            <Text style={styles.previewMax}>/ 100</Text>
+          </View>
+          <Text style={[styles.previewRisk, { color: previewColor }]}>
+            {preview.risk_level} risk
+          </Text>
+        </View>
 
         <CustomButton
-          title="Save Check-In"
+          title="Save today's check-in"
           onPress={handleSubmit}
           loading={loading}
+          variant="primary"
         />
-      </View>
-    </ScrollView>
+      </ScrollView>
+      <BottomNav />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000000' },
-  content: { paddingBottom: 40 },
-  header: {
-    paddingTop: 60,
-    paddingBottom: 28,
-    paddingHorizontal: 24,
-  },
-  backBtn: { marginBottom: 12 },
-  backText: { color: '#3B82F6', fontSize: 15 },
-  title: { color: '#FFFFFF', fontSize: 26, fontWeight: '700' },
-  subtitle: { color: '#6B7280', fontSize: 14, marginTop: 4 },
-  formContainer: { padding: 20, gap: 14 },
-  previewCard: { alignItems: 'center', paddingVertical: 20 },
-  previewLabel: { color: '#9CA3AF', fontSize: 13, marginBottom: 8 },
-  previewScore: { fontSize: 56, fontWeight: '800' },
-  riskPill: {
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 20,
-    marginTop: 8,
-  },
-  riskPillText: { fontSize: 13, fontWeight: '600' },
-  sliderLabel: { color: '#9CA3AF', fontSize: 13, fontWeight: '500', marginBottom: 12 },
+  root: { flex: 1, backgroundColor: '#F8F5F0' },
+  container: { flex: 1 },
+  content: { paddingHorizontal: 20, paddingBottom: 20 },
+  heading: { fontSize: 24, fontWeight: '700', color: '#1B4332', marginTop: 8 },
+  subheading: { fontSize: 16, fontWeight: '600', color: '#2D6A4F', marginTop: 4 },
+  description: { fontSize: 14, color: '#5C6B6A', marginTop: 2, marginBottom: 16 },
+  field: { marginBottom: 20 },
+  hint: { fontSize: 12, color: '#A8A098', marginTop: 2, textAlign: 'right' },
+  sliderLabel: { fontSize: 14, fontWeight: '500', color: '#1B4332', marginBottom: 4 },
   slider: { width: '100%', height: 40 },
-  sliderLabels: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: -4,
-  },
-  sliderEndLabel: { color: '#6B7280', fontSize: 11 },
-  moodRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 8,
-  },
+  sliderEnds: { flexDirection: 'row', justifyContent: 'space-between' },
+  sliderEnd: { fontSize: 12, color: '#5C6B6A' },
+  moodRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 },
   moodBtn: {
     alignItems: 'center',
-    padding: 10,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'transparent',
-    gap: 4,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    borderRadius: 10,
+    backgroundColor: '#E5E0D8',
+    minWidth: 52,
   },
-  moodBtnSelected: {
-    borderColor: '#3B82F6',
-    backgroundColor: 'rgba(59,130,246,0.12)',
+  moodBtnSelected: { backgroundColor: '#2D6A4F' },
+  moodEmoji: { fontSize: 24 },
+  moodLabel: { fontSize: 10, color: '#5C6B6A', marginTop: 2 },
+  moodLabelSelected: { color: '#FFFFFF', fontWeight: '600' },
+  previewCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
+    marginBottom: 16,
   },
-  moodEmoji: { fontSize: 26 },
-  moodLabel: { color: '#6B7280', fontSize: 10 },
+  previewLabel: { fontSize: 12, fontWeight: '600', color: '#5C6B6A', letterSpacing: 0.5 },
+  previewRow: { flexDirection: 'row', alignItems: 'baseline', marginTop: 4 },
+  previewScore: { fontSize: 40, fontWeight: '800' },
+  previewMax: { fontSize: 14, color: '#A8A098', marginLeft: 4 },
+  previewRisk: { fontSize: 14, fontWeight: '600', marginTop: 2 },
 });

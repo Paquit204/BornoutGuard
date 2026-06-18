@@ -1,10 +1,10 @@
-import React from 'react';
+ import React from 'react';
 import {
-    ActivityIndicator,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    ViewStyle,
+  ActivityIndicator,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  ViewStyle,
 } from 'react-native';
 
 interface Props {
@@ -25,9 +25,15 @@ export default function CustomButton({
   style,
 }: Props) {
   const bgColors = {
-    primary: '#3B82F6',
-    secondary: '#1F2937',
-    danger: '#EF4444',
+    primary: '#2D6A4F',
+    secondary: '#E5E0D8',
+    danger: '#D9534F',
+  };
+
+  const textColors = {
+    primary: '#FFFFFF',
+    secondary: '#1B4332',
+    danger: '#FFFFFF',
   };
 
   return (
@@ -43,9 +49,11 @@ export default function CustomButton({
       activeOpacity={0.8}
     >
       {loading ? (
-        <ActivityIndicator color="#FFFFFF" size="small" />
+        <ActivityIndicator color={textColors[variant]} size="small" />
       ) : (
-        <Text style={styles.text}>{title}</Text>
+        <Text style={[styles.text, { color: textColors[variant] }]}>
+          {title}
+        </Text>
       )}
     </TouchableOpacity>
   );
@@ -61,7 +69,6 @@ const styles = StyleSheet.create({
     minHeight: 50,
   },
   text: {
-    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
   },
