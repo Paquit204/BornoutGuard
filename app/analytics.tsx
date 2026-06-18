@@ -11,6 +11,7 @@ import Svg, { G, Line, Path, Rect, Text as SvgText } from 'react-native-svg';
 import BottomNav from '../components/BottomNav';
 import LoadingSpinner from '../components/LoadingSpinner';
 import TopBar from '../components/TopBar';
+import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { DailyCheckin } from '../types/database';
 
@@ -18,7 +19,6 @@ const { width: screenWidth } = Dimensions.get('window');
 const CHART_HEIGHT = 180;
 const CHART_PADDING = { top: 10, bottom: 20, left: 30, right: 10 };
 
-// Build line path
 function buildLinePath(data: { x: number; y: number }[], chartWidth: number, chartHeight: number, yMax: number) {
   const minX = Math.min(...data.map(d => d.x));
   const maxX = Math.max(...data.map(d => d.x));
@@ -33,7 +33,6 @@ function buildLinePath(data: { x: number; y: number }[], chartWidth: number, cha
   return path;
 }
 
-// Single chart component
 function LineChart({
   data,
   labels,
@@ -49,7 +48,6 @@ function LineChart({
 }) {
   if (data.length === 0) return null;
 
-  // Calculate width based on number of points (minimum 36px per point)
   const minPointWidth = 36;
   const requiredWidth = data.length * minPointWidth + CHART_PADDING.left + CHART_PADDING.right;
   const chartWidth = Math.max(screenWidth - 40, requiredWidth);
@@ -64,7 +62,6 @@ function LineChart({
 
   return (
     <Svg width={chartWidth} height={height}>
-      {/* Horizontal grid lines */}
       {yTicks.map((tick, i) => {
         const y = CHART_PADDING.top + chartHeight - (tick / yMax) * chartHeight;
         return (
@@ -90,7 +87,6 @@ function LineChart({
           </G>
         );
       })}
-      {/* X labels */}
       {data.map((point, i) => {
         const x = CHART_PADDING.left + ((point.x - minX) / xRange) * chartWidth;
         return (
@@ -107,9 +103,7 @@ function LineChart({
           </SvgText>
         );
       })}
-      {/* Line */}
       <Path d={path} stroke={color} strokeWidth="2" fill="none" />
-      {/* Dots */}
       {data.map((point, i) => {
         const x = CHART_PADDING.left + ((point.x - minX) / xRange) * chartWidth;
         const y = CHART_PADDING.top + chartHeight - (point.y / yMax) * chartHeight;
@@ -130,6 +124,7 @@ function LineChart({
 }
 
 export default function AnalyticsScreen() {
+  const { profile } = useAuth();
   const [checkins, setCheckins] = useState<DailyCheckin[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
@@ -171,14 +166,20 @@ export default function AnalyticsScreen() {
     return `${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   });
 
-  // Risk distribution
   const riskCounts = { Low: 0, Moderate: 0, High: 0 };
   last14.forEach((c) => riskCounts[c.risk_level]++);
   const total = last14.length || 1;
 
+  const displayName = profile?.full_name || profile?.email?.split('@')[0] || 'Student';
+
   return (
     <View style={styles.root}>
-      <TopBar />
+      <TopBar
+        showProfile={true}
+        profile={{
+          name: displayName,
+        }}
+      />
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
         <Text style={styles.heading}>Your trends.</Text>
         <Text style={styles.subheading}>Patterns are easier to fix than moments.</Text>
@@ -191,7 +192,6 @@ export default function AnalyticsScreen() {
           </View>
         ) : (
           <>
-            {/* Summary Stats */}
             <View style={styles.statsRow}>
               <View style={styles.statCard}>
                 <Text style={styles.statValue}>{avgScore}</Text>
@@ -211,7 +211,6 @@ export default function AnalyticsScreen() {
               </View>
             </View>
 
-            {/* BURNOUT TREND - scrollable */}
             <Text style={styles.chartTitle}>BURNOUT TREND</Text>
             <View style={styles.chartCard}>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -224,7 +223,6 @@ export default function AnalyticsScreen() {
               </ScrollView>
             </View>
 
-            {/* STRESS LEVEL - scrollable */}
             <Text style={styles.chartTitle}>STRESS LEVEL</Text>
             <View style={styles.chartCard}>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -237,9 +235,8 @@ export default function AnalyticsScreen() {
               </ScrollView>
             </View>
 
-            {/* SLEEP VS STUDY - scrollable with two lines */}
             <Text style={styles.chartTitle}>SLEEP VS STUDY</Text>
-            <View style={styles.chartCard}>
+            <View style={[styles.chartCard, { position: 'relative' }]}>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 <View style={{ position: 'relative', flexDirection: 'row' }}>
                   <LineChart
@@ -260,7 +257,6 @@ export default function AnalyticsScreen() {
               </ScrollView>
             </View>
 
-            {/* RISK DISTRIBUTION */}
             <Text style={styles.chartTitle}>RISK DISTRIBUTION</Text>
             <View style={styles.riskCard}>
               {Object.entries(riskCounts).map(([level, count]) => {

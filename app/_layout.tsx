@@ -15,18 +15,20 @@ function RootLayoutNav() {
   useEffect(() => {
     if (loading) return;
     const inAuthGroup = segments[0] === 'login' || segments[0] === 'signup';
+    const inWelcome = segments[0] === 'welcome';
+
     if (!session && !inAuthGroup) {
       router.replace('/login');
     } else if (session && inAuthGroup) {
+      router.replace('/welcome');
+    } else if (session && segments[0] === undefined) {
       router.replace('/dashboard');
     }
   }, [session, loading, segments]);
 
   if (loading) return <LoadingSpinner message="Starting BurnoutGuard..." />;
 
-  // Determine if we should show Footer (not on login/signup, and only if session exists)
-  const inAuthGroup = segments[0] === 'login' || segments[0] === 'signup';
-  const showFooter = !inAuthGroup && session;
+  const showFooter = session && segments[0] !== 'login' && segments[0] !== 'signup';
 
   return (
     <View style={{ flex: 1 }}>
@@ -34,6 +36,7 @@ function RootLayoutNav() {
         <Stack.Screen name="index" />
         <Stack.Screen name="login" />
         <Stack.Screen name="signup" />
+        <Stack.Screen name="welcome" />
         <Stack.Screen name="dashboard" />
         <Stack.Screen name="checkin" />
         <Stack.Screen name="analytics" />

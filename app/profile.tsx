@@ -50,16 +50,40 @@ export default function ProfileScreen() {
 
   return (
     <View style={styles.root}>
-      <TopBar />
+      <TopBar showBack={true} />
+
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
         <Text style={styles.heading}>ABOUT THIS APP</Text>
         <Text style={styles.appName}>BurnoutGuard</Text>
         <Text style={styles.description}>
           A daily companion for student wellbeing – built quiet, fast, and on-device.
         </Text>
+
+        {/* User Info */}
+        <Text style={styles.sectionTitle}>You</Text>
         <View style={styles.infoBox}>
-          <Text style={styles.infoLabel}>You</Text>
-          <Text style={styles.infoValue}>Local profile - no account needed</Text>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Name</Text>
+            <Text style={styles.infoValue}>{profile?.full_name || 'Not set'}</Text>
+          </View>
+          <View style={styles.divider} />
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Email</Text>
+            <Text style={styles.infoValue}>{profile?.email || 'Not set'}</Text>
+          </View>
+          <View style={styles.divider} />
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Member since</Text>
+            <Text style={styles.infoValue}>
+              {profile?.created_at
+                ? new Date(profile.created_at).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                  })
+                : '—'}
+            </Text>
+          </View>
         </View>
 
         <Text style={styles.sectionTitle}>HOW THE SCORE WORKS</Text>
@@ -116,6 +140,7 @@ export default function ProfileScreen() {
           <Text style={styles.signOutText}>Sign Out</Text>
         </TouchableOpacity>
       </ScrollView>
+
       <BottomNav />
     </View>
   );
@@ -127,24 +152,38 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 20, paddingBottom: 20 },
   heading: { fontSize: 12, fontWeight: '600', color: '#5C6B6A', letterSpacing: 0.5, marginTop: 8 },
   appName: { fontSize: 28, fontWeight: '800', color: '#1B4332', marginTop: 2 },
-  description: { fontSize: 14, color: '#4A5A58', marginTop: 4, marginBottom: 12 },
+  description: { fontSize: 14, color: '#5C6B6A', marginTop: 4, marginBottom: 12 },
+  sectionTitle: { fontSize: 14, fontWeight: '700', color: '#1B4332', marginTop: 16, marginBottom: 8 },
+  sectionDesc: { fontSize: 13, color: '#5C6B6A', marginBottom: 8 },
   infoBox: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#E5E0D8',
+    marginBottom: 12,
+  },
+  infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    backgroundColor: '#FFFFFF',
-    padding: 12,
-    borderRadius: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-    marginBottom: 16,
+    paddingVertical: 6,
   },
-  infoLabel: { fontWeight: '600', color: '#1B4332' },
-  infoValue: { color: '#5C6B6A' },
-  sectionTitle: { fontSize: 14, fontWeight: '700', color: '#1B4332', marginTop: 16, marginBottom: 4 },
-  sectionDesc: { fontSize: 13, color: '#5C6B6A', marginBottom: 8 },
+  infoLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#1B4332',
+  },
+  infoValue: {
+    fontSize: 14,
+    color: '#5C6B6A',
+    textAlign: 'right',
+    flexShrink: 1,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#E5E0D8',
+    marginVertical: 2,
+  },
   weightRow: {
     flexDirection: 'row',
     alignItems: 'center',
