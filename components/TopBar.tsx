@@ -41,11 +41,9 @@ export default function TopBar({ showBack = false, profile, showProfile = false 
 
       {showProfile && profile && (
         <TouchableOpacity style={styles.right} onPress={handleProfilePress}>
-          {/* Name first */}
           <Text style={styles.nameText} numberOfLines={1}>
             {profile.name}
           </Text>
-          {/* Avatar (logo) second */}
           <View style={styles.avatarContainer}>
             <Text style={styles.avatarText}>{getInitials(profile.name)}</Text>
           </View>

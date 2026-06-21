@@ -180,7 +180,10 @@ export default function AnalyticsScreen() {
           name: displayName,
         }}
       />
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={[styles.content, { paddingBottom: 90 }]} // 👈 added padding
+      >
         <Text style={styles.heading}>Your trends.</Text>
         <Text style={styles.subheading}>Patterns are easier to fix than moments.</Text>
 

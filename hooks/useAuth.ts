@@ -1,4 +1,4 @@
-import { Session, User } from '@supabase/supabase-js';
+ import { Session, User } from '@supabase/supabase-js';
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Profile } from '../types/database';

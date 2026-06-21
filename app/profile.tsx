@@ -1,144 +1,93 @@
  import { useRouter } from 'expo-router';
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import BottomNav from '../components/BottomNav';
 import TopBar from '../components/TopBar';
 import { useAuth } from '../hooks/useAuth';
-import { supabase } from '../lib/supabase';
 
 export default function ProfileScreen() {
-  const { profile, signOut } = useAuth();
+  const { profile } = useAuth();
   const router = useRouter();
 
-  const handleClearData = () => {
-    Alert.alert(
-      'Clear all check-ins',
-      'This will permanently delete all your daily check-in data. Are you sure?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Clear',
-          style: 'destructive',
-          onPress: async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-              await supabase.from('daily_checkins').delete().eq('user_id', user.id);
-              Alert.alert('Data cleared', 'All check-ins have been removed.');
-            }
-          },
-        },
-      ]
-    );
-  };
-
-  const handleSignOut = () => {
-    Alert.alert(
-      'Sign Out',
-      'Are you sure you want to sign out?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Sign Out',
-          style: 'destructive',
-          onPress: async () => {
-            await signOut();
-            router.replace('/login');
-          },
-        },
-      ]
-    );
-  };
+  const displayName = profile?.full_name || profile?.email?.split('@')[0] || 'Student';
 
   return (
     <View style={styles.root}>
       <TopBar showBack={true} />
 
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-        <Text style={styles.heading}>ABOUT THIS APP</Text>
-        <Text style={styles.appName}>BurnoutGuard</Text>
-        <Text style={styles.description}>
-          A daily companion for student wellbeing – built quiet, fast, and on-device.
-        </Text>
-
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={[styles.content, { paddingBottom: 90 }]}
+      >
         {/* User Info */}
-        <Text style={styles.sectionTitle}>You</Text>
-        <View style={styles.infoBox}>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Name</Text>
-            <Text style={styles.infoValue}>{profile?.full_name || 'Not set'}</Text>
-          </View>
-          <View style={styles.divider} />
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Email</Text>
-            <Text style={styles.infoValue}>{profile?.email || 'Not set'}</Text>
-          </View>
-          <View style={styles.divider} />
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Member since</Text>
-            <Text style={styles.infoValue}>
-              {profile?.created_at
-                ? new Date(profile.created_at).toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                  })
-                : '—'}
+        <View style={styles.userSection}>
+          <View style={styles.avatarLarge}>
+            <Text style={styles.avatarText}>
+              {displayName.charAt(0).toUpperCase()}
             </Text>
           </View>
+          <Text style={styles.userName}>{displayName}</Text>
+          <Text style={styles.userEmail}>{profile?.email}</Text>
         </View>
 
-        <Text style={styles.sectionTitle}>HOW THE SCORE WORKS</Text>
-        <Text style={styles.sectionDesc}>
-          Each day's check-in is weighed across four factors. The result is a single number from 0 to 100.
-        </Text>
-
-        <View style={styles.weightRow}>
-          <Text style={styles.weightLabel}>Stress</Text>
-          <Text style={styles.weightDetail}>1-10 scale - 0-100</Text>
-        </View>
-        <View style={styles.weightRow}>
-          <Text style={styles.weightLabel}>Sleep</Text>
-          <Text style={styles.weightDetail}>7-9 hours - less is worse</Text>
-        </View>
-        <View style={styles.weightRow}>
-          <Text style={styles.weightLabel}>Study</Text>
-          <Text style={styles.weightDetail}>5-6 hours - studies are better</Text>
-        </View>
-        <View style={styles.weightRow}>
-          <Text style={styles.weightLabel}>Workload</Text>
-          <Text style={styles.weightDetail}>Open assignments count</Text>
-        </View>
-
-        <Text style={styles.sectionTitle}>RISK LEVELS</Text>
-        <View style={styles.riskRow}>
-          <View style={[styles.riskDot, { backgroundColor: '#2D6A4F' }]} />
-          <Text style={styles.riskLabel}>Low 0-33</Text>
-          <Text style={styles.riskDesc}>Healthy balance maintained.</Text>
-        </View>
-        <View style={styles.riskRow}>
-          <View style={[styles.riskDot, { backgroundColor: '#E8A838' }]} />
-          <Text style={styles.riskLabel}>Moderate 34-66</Text>
-          <Text style={styles.riskDesc}>Watch for warning signs.</Text>
-        </View>
-        <View style={styles.riskRow}>
-          <View style={[styles.riskDot, { backgroundColor: '#D9534F' }]} />
-          <Text style={styles.riskLabel}>High 67-100</Text>
-          <Text style={styles.riskDesc}>Immediate action recommended.</Text>
-        </View>
-
-        <Text style={styles.sectionTitle}>DATA</Text>
-        <TouchableOpacity style={styles.clearButton} onPress={handleClearData}>
-          <Text style={styles.clearButtonText}>Clear all check-ins</Text>
+        {/* Navigation Cards */}
+        <TouchableOpacity style={styles.navCard} onPress={() => router.push('/settings')}>
+          <View style={[styles.navIconWrapper, { backgroundColor: '#E8F5E9' }]}>
+            <Text style={styles.navIcon}>⚙️</Text>
+          </View>
+          <View style={styles.navContent}>
+            <Text style={styles.navTitle}>Settings</Text>
+            <Text style={styles.navDesc}>Account, about, and sign out</Text>
+          </View>
+          <Text style={styles.navArrow}>›</Text>
         </TouchableOpacity>
-        <Text style={styles.localOnly}>Local only</Text>
 
-        <Text style={styles.footer}>
-          BurnoutGuard is an educational wellness tool, not a medical device. If you're struggling, please reach out to a counselor, friend, or family member.
-        </Text>
-        <Text style={styles.version}>V1.0 - BUILT WITH CARE</Text>
-
-        <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
-          <Text style={styles.signOutText}>Sign Out</Text>
+        <TouchableOpacity style={styles.navCard} onPress={() => router.push('/report')}>
+          <View style={[styles.navIconWrapper, { backgroundColor: '#E3F2FD' }]}>
+            <Text style={styles.navIcon}>📊</Text>
+          </View>
+          <View style={styles.navContent}>
+            <Text style={styles.navTitle}>Export Wellness Data</Text>
+            <Text style={styles.navDesc}>Download your check-in history as CSV</Text>
+          </View>
+          <Text style={styles.navArrow}>›</Text>
         </TouchableOpacity>
+
+        <TouchableOpacity style={styles.navCard} onPress={() => router.push('/checkin-list')}>
+          <View style={[styles.navIconWrapper, { backgroundColor: '#FFF3E0' }]}>
+            <Text style={styles.navIcon}>📋</Text>
+          </View>
+          <View style={styles.navContent}>
+            <Text style={styles.navTitle}>Manage Historical Check-ins</Text>
+            <Text style={styles.navDesc}>View, edit, or delete past check-ins</Text>
+          </View>
+          <Text style={styles.navArrow}>›</Text>
+        </TouchableOpacity>
+
+        {/* Risk Levels Section */}
+        <Text style={styles.sectionTitle}>Risk Assessment Guide</Text>
+        <View style={styles.riskCard}>
+          <View style={styles.riskItem}>
+            <View style={[styles.riskDot, { backgroundColor: '#2D6A4F' }]} />
+            <View>
+              <Text style={styles.riskTitle}>Low 0-33</Text>
+              <Text style={styles.riskDesc}>Healthy balance maintained.</Text>
+            </View>
+          </View>
+          <View style={styles.riskItem}>
+            <View style={[styles.riskDot, { backgroundColor: '#E8A838' }]} />
+            <View>
+              <Text style={styles.riskTitle}>Moderate 34-66</Text>
+              <Text style={styles.riskDesc}>Watch for warning signs.</Text>
+            </View>
+          </View>
+          <View style={styles.riskItem}>
+            <View style={[styles.riskDot, { backgroundColor: '#D9534F' }]} />
+            <View>
+              <Text style={styles.riskTitle}>High 67-100</Text>
+              <Text style={styles.riskDesc}>Immediate action recommended.</Text>
+            </View>
+          </View>
+        </View>
       </ScrollView>
 
       <BottomNav />
@@ -150,70 +99,112 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#F8F5F0' },
   container: { flex: 1 },
   content: { paddingHorizontal: 20, paddingBottom: 20 },
-  heading: { fontSize: 12, fontWeight: '600', color: '#5C6B6A', letterSpacing: 0.5, marginTop: 8 },
-  appName: { fontSize: 28, fontWeight: '800', color: '#1B4332', marginTop: 2 },
-  description: { fontSize: 14, color: '#5C6B6A', marginTop: 4, marginBottom: 12 },
-  sectionTitle: { fontSize: 14, fontWeight: '700', color: '#1B4332', marginTop: 16, marginBottom: 8 },
-  sectionDesc: { fontSize: 13, color: '#5C6B6A', marginBottom: 8 },
-  infoBox: {
+
+  userSection: {
+    alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: '#E5E0D8',
-    marginBottom: 12,
   },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 6,
+  avatarLarge: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#2D6A4F',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  infoLabel: {
-    fontSize: 14,
-    fontWeight: '500',
+  avatarText: {
+    color: '#FFFFFF',
+    fontSize: 32,
+    fontWeight: '700',
+  },
+  userName: {
+    fontSize: 20,
+    fontWeight: '700',
     color: '#1B4332',
+    marginTop: 12,
   },
-  infoValue: {
+  userEmail: {
     fontSize: 14,
     color: '#5C6B6A',
-    textAlign: 'right',
-    flexShrink: 1,
+    marginTop: 2,
   },
-  divider: {
-    height: 1,
-    backgroundColor: '#E5E0D8',
-    marginVertical: 2,
+
+  navCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#E5E0D8',
   },
-  weightRow: {
+  navIconWrapper: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
+  },
+  navIcon: {
+    fontSize: 22,
+  },
+  navContent: {
+    flex: 1,
+  },
+  navTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1B4332',
+  },
+  navDesc: {
+    fontSize: 12,
+    color: '#5C6B6A',
+    marginTop: 2,
+  },
+  navArrow: {
+    fontSize: 20,
+    color: '#A8A098',
+  },
+
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1B4332',
+    marginTop: 16,
+    marginBottom: 10,
+  },
+  riskCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#E5E0D8',
+  },
+  riskItem: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 6,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E0D8',
   },
-  weightLabel: { flex: 1, fontWeight: '500', color: '#1B4332' },
-  weightDetail: { flex: 2, color: '#5C6B6A' },
-  riskRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 6 },
-  riskDot: { width: 10, height: 10, borderRadius: 5, marginRight: 8 },
-  riskLabel: { fontWeight: '600', color: '#1B4332', width: 90 },
-  riskDesc: { color: '#5C6B6A', fontSize: 13, flex: 1 },
-  clearButton: {
-    backgroundColor: '#D9534F',
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 4,
+  riskDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginRight: 12,
   },
-  clearButtonText: { color: '#FFFFFF', fontWeight: '600' },
-  localOnly: { fontSize: 12, color: '#A8A098', textAlign: 'center', marginTop: 4 },
-  footer: { fontSize: 13, color: '#5C6B6A', marginTop: 20, lineHeight: 20, fontStyle: 'italic' },
-  version: { fontSize: 12, color: '#A8A098', textAlign: 'center', marginTop: 8 },
-  signOutButton: {
-    marginTop: 24,
-    backgroundColor: '#E5E0D8',
-    padding: 14,
-    borderRadius: 12,
-    alignItems: 'center',
+  riskTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1B4332',
   },
-  signOutText: { color: '#1B4332', fontWeight: '600' },
+  riskDesc: {
+    fontSize: 13,
+    color: '#5C6B6A',
+  },
 });
