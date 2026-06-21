@@ -1,6 +1,6 @@
  import Slider from '@react-native-community/slider';
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
 import {
   Alert,
   ScrollView,
@@ -9,6 +9,13 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+} from 'react-native-reanimated';
 import BottomNav from '../components/BottomNav';
 import CustomButton from '../components/CustomButton';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -84,13 +91,53 @@ const stepperStyles = StyleSheet.create({
 
 export default function CheckinScreen() {
   const { profile } = useAuth();
+  const router = useRouter();
+  const params = useLocalSearchParams();
+
   const [studyHours, setStudyHours] = useState(4);
   const [sleepHours, setSleepHours] = useState(7);
   const [assignments, setAssignments] = useState(2);
   const [stressLevel, setStressLevel] = useState(5);
   const [selectedMood, setSelectedMood] = useState(0);
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
+
+  // ✅ Animated FAB – pulse effect
+  const scale = useSharedValue(1);
+
+  useEffect(() => {
+    scale.value = withRepeat(
+      withTiming(1.15, {
+        duration: 800,
+        easing: Easing.inOut(Easing.ease),
+      }),
+      -1,
+      true
+    );
+  }, []);
+
+  const fabAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  // Read pre‑filled params from "Add" button
+  useEffect(() => {
+    if (params.studyHours) {
+      setStudyHours(parseFloat(params.studyHours as string));
+    }
+    if (params.sleepHours) {
+      setSleepHours(parseFloat(params.sleepHours as string));
+    }
+    if (params.assignments) {
+      setAssignments(parseInt(params.assignments as string));
+    }
+    if (params.stressLevel) {
+      setStressLevel(parseInt(params.stressLevel as string));
+    }
+    if (params.mood) {
+      const moodIndex = MOOD_LABELS.indexOf(params.mood as string);
+      if (moodIndex !== -1) setSelectedMood(moodIndex);
+    }
+  }, [params]);
 
   const handleSubmit = async () => {
     setLoading(true);
@@ -137,7 +184,7 @@ export default function CheckinScreen() {
       />
       <ScrollView
         style={styles.container}
-        contentContainerStyle={[styles.content, { paddingBottom: 90 }]} // 👈 added padding
+        contentContainerStyle={[styles.content, { paddingBottom: 100 }]}
       >
         <Text style={styles.heading}>DAILY CHECK-IN</Text>
         <Text style={styles.subheading}>How was today?</Text>
@@ -237,6 +284,18 @@ export default function CheckinScreen() {
           variant="primary"
         />
       </ScrollView>
+
+      {/* ✅ Floating Action Button with pulse animation */}
+      <Animated.View style={[styles.fabWrapper, fabAnimatedStyle]}>
+        <TouchableOpacity
+          style={styles.fab}
+          onPress={() => router.push('/checkin-list')}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.fabIcon}>📋</Text>
+        </TouchableOpacity>
+      </Animated.View>
+
       <BottomNav />
     </View>
   );
@@ -285,4 +344,34 @@ const styles = StyleSheet.create({
   previewScore: { fontSize: 40, fontWeight: '800' },
   previewMax: { fontSize: 14, color: '#A8A098', marginLeft: 4 },
   previewRisk: { fontSize: 14, fontWeight: '600', marginTop: 2 },
+
+  // Floating Action Button
+  fabWrapper: {
+    position: 'absolute',
+    bottom: 80,
+    right: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 999,
+  },
+  fab: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#2D6A4F',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 8,
+  },
+  fabIcon: {
+    fontSize: 28,
+    color: '#FFFFFF',
+  },
 });

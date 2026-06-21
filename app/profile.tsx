@@ -52,16 +52,7 @@ export default function ProfileScreen() {
           <Text style={styles.navArrow}>›</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.navCard} onPress={() => router.push('/checkin-list')}>
-          <View style={[styles.navIconWrapper, { backgroundColor: '#FFF3E0' }]}>
-            <Text style={styles.navIcon}>📋</Text>
-          </View>
-          <View style={styles.navContent}>
-            <Text style={styles.navTitle}>Manage Historical Check-ins</Text>
-            <Text style={styles.navDesc}>View, edit, or delete past check-ins</Text>
-          </View>
-          <Text style={styles.navArrow}>›</Text>
-        </TouchableOpacity>
+        {/* ⚠️ "Manage Historical Check-ins" card REMOVED – now accessible via FAB on Check-in screen */}
 
         {/* Risk Levels Section */}
         <Text style={styles.sectionTitle}>Risk Assessment Guide</Text>

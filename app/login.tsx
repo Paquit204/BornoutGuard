@@ -4,6 +4,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { useState } from 'react';
 import {
   Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -16,7 +17,6 @@ import {
 import CustomButton from '../components/CustomButton';
 import { supabase } from '../lib/supabase';
 
-// Required for AuthSession to work
 WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen() {
@@ -67,6 +67,7 @@ export default function LoginScreen() {
         return;
       }
 
+      // ✅ Navigate to Welcome screen
       router.replace('/welcome');
 
     } catch (err: any) {
@@ -110,13 +111,12 @@ export default function LoginScreen() {
         const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUri);
 
         if (result.type === 'success') {
-          // ✅ Wait a moment for Supabase to set the session
+          // ✅ Navigate to Welcome after OAuth
           setTimeout(async () => {
             const { data: sessionData } = await supabase.auth.getSession();
             if (sessionData.session) {
               router.replace('/welcome');
             } else {
-              // Try one more time
               setTimeout(async () => {
                 const { data: retryData } = await supabase.auth.getSession();
                 if (retryData.session) {
@@ -151,10 +151,17 @@ export default function LoginScreen() {
       <ScrollView
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
           <View style={styles.iconBox}>
-            <Text style={styles.icon}>🧠</Text>
+            <Text style={styles.fallbackIcon}>🧠</Text>
+            <Image
+              source={require('../assets/images/BornoutGuard.png')}
+              style={styles.logo}
+              resizeMode="contain"
+              onError={() => console.log('Logo image not found')}
+            />
           </View>
           <Text style={styles.title}>Welcome Back</Text>
           <Text style={styles.subtitle}>Sign in to monitor your wellness</Text>
@@ -240,73 +247,90 @@ export default function LoginScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8F5F0' },
-  scroll: { flexGrow: 1, justifyContent: 'center', padding: 24 },
-  header: { alignItems: 'center', marginBottom: 40 },
+  scroll: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+  },
+  header: { alignItems: 'center', marginBottom: 20 },
   iconBox: {
-    width: 80,
-    height: 80,
-    borderRadius: 20,
+    width: 100,
+    height: 100,
+    borderRadius: 24,
     backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 4,
     elevation: 2,
+    position: 'relative',
+    overflow: 'hidden',
+    padding: 12,
   },
-  icon: { fontSize: 36 },
-  title: { fontSize: 28, fontWeight: '700', color: '#1B4332', marginBottom: 6 },
-  subtitle: { fontSize: 14, color: '#5C6B6A' },
-  form: { gap: 16 },
-  inputGroup: { gap: 6 },
-  label: { color: '#1B4332', fontSize: 13, fontWeight: '500' },
+  fallbackIcon: {
+    fontSize: 48,
+    position: 'absolute',
+    color: '#2D6A4F',
+  },
+  logo: {
+    width: 75,
+    height: 75,
+    zIndex: 1,
+  },
+  title: { fontSize: 24, fontWeight: '700', color: '#1B4332', marginBottom: 2 },
+  subtitle: { fontSize: 13, color: '#5C6B6A' },
+  form: { gap: 10 },
+  inputGroup: { gap: 4 },
+  label: { color: '#1B4332', fontSize: 12, fontWeight: '500' },
   input: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 14,
+    borderRadius: 10,
+    padding: 12,
     color: '#1B4332',
-    fontSize: 15,
+    fontSize: 14,
     borderWidth: 1,
     borderColor: '#E5E0D8',
   },
-  forgotLink: { alignSelf: 'flex-end', marginTop: -6 },
-  forgotText: { color: '#2D6A4F', fontSize: 13, fontWeight: '600' },
-  button: { marginTop: 8 },
+  forgotLink: { alignSelf: 'flex-end', marginTop: -4 },
+  forgotText: { color: '#2D6A4F', fontSize: 12, fontWeight: '600' },
+  button: { marginTop: 4 },
   socialDivider: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 16,
+    marginVertical: 10,
   },
   dividerLine: { flex: 1, height: 1, backgroundColor: '#E5E0D8' },
-  dividerText: { marginHorizontal: 12, color: '#A8A098', fontSize: 12 },
+  dividerText: { marginHorizontal: 10, color: '#A8A098', fontSize: 11 },
   socialRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: 12,
+    gap: 10,
   },
   socialButton: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
     alignItems: 'center',
   },
   socialButtonText: {
     color: '#FFFFFF',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
   },
   loadingText: {
     textAlign: 'center',
     color: '#5C6B6A',
-    marginTop: 8,
+    marginTop: 6,
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 16,
+    marginTop: 10,
   },
-  footerText: { color: '#5C6B6A', fontSize: 14 },
-  link: { color: '#2D6A4F', fontSize: 14, fontWeight: '600' },
+  footerText: { color: '#5C6B6A', fontSize: 13 },
+  link: { color: '#2D6A4F', fontSize: 13, fontWeight: '600' },
 });
