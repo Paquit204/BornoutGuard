@@ -118,7 +118,7 @@ export default function DashboardScreen() {
       />
       <ScrollView
         style={styles.container}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingBottom: 90 }]} // 👈 added padding
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#2D6A4F" />
         }

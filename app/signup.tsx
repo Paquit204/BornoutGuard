@@ -1,5 +1,5 @@
- import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useRouter } from 'expo-router';
+import { useRef, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -20,9 +20,12 @@ export default function SignupScreen() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [cooldown, setCooldown] = useState(false);
+  const cooldownTimer = useRef<NodeJS.Timeout | null>(null);
   const router = useRouter();
 
   const handleSignup = async () => {
+    // --- Validation ---
     if (!fullName || !email || !password || !confirmPassword) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
@@ -35,10 +38,16 @@ export default function SignupScreen() {
       Alert.alert('Error', 'Password must be at least 6 characters');
       return;
     }
+    if (cooldown) {
+      Alert.alert('Please wait', 'You are trying too many times. Please wait a few minutes and try again.');
+      return;
+    }
 
     setLoading(true);
 
     try {
+      console.log('📤 Attempting sign-up with:', { email, fullName });
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -47,34 +56,64 @@ export default function SignupScreen() {
         },
       });
 
+      // Log the full response (check Metro terminal)
+      console.log('🔐 Signup response:', JSON.stringify({ data, error }, null, 2));
+
       if (error) {
+        // --- Handle rate-limit specifically ---
+        if (
+          error.message.includes('rate limit') ||
+          error.message.includes('too many requests') ||
+          error.message.includes('email rate limit')
+        ) {
+          Alert.alert(
+            'Too many attempts',
+            'You are trying too many times. Please wait a few minutes and try again.'
+          );
+          setCooldown(true);
+          if (cooldownTimer.current) clearTimeout(cooldownTimer.current);
+          cooldownTimer.current = setTimeout(() => {
+            setCooldown(false);
+          }, 120000);
+          return;
+        }
+
+        // Other errors
         let message = error.message;
         if (error.message.includes('User already registered')) {
           message = 'This email is already registered. Please sign in instead.';
         } else if (error.message.includes('Email provider is disabled')) {
           message = 'Email/Password sign-up is currently disabled. Please contact support.';
-        } else if (error.message.includes('Password should be at least 6 characters')) {
-          message = 'Password must be at least 6 characters long.';
         } else if (error.message.includes('Invalid email')) {
           message = 'Please enter a valid email address.';
         } else if (error.message.includes('Network request failed')) {
           message = 'Network error. Please check your internet connection.';
-        } else if (error.message.includes('rate limit')) {
-          message = 'Too many attempts. Please wait a moment and try again.';
         } else {
           message = `Sign-up failed: ${error.message}`;
         }
         Alert.alert('Signup Failed', message);
-      } else {
-        await supabase.auth.signOut();
-        Alert.alert(
-          'Account Created!',
-          'Please sign in with your new credentials.',
-          [{ text: 'OK', onPress: () => router.replace('/login') }]
-        );
+        return;
       }
+
+      // Check if user was actually created
+      if (!data.user) {
+        Alert.alert('Signup Error', 'We could not create your account. Please try again.');
+        return;
+      }
+
+      console.log('✅ User created:', data.user.id);
+
+      // Success – sign out to force email confirmation
+      await supabase.auth.signOut();
+
+      Alert.alert(
+        'Account created successfully',
+        'Please check your Gmail to confirm your account before logging in.',
+        [{ text: 'OK', onPress: () => router.replace('/login') }]
+      );
+
     } catch (err: any) {
-      console.error('Unexpected signup error:', err);
+      console.error('🔥 Unexpected signup error:', err);
       Alert.alert(
         'Signup Error',
         'An unexpected error occurred. Please check your internet connection and try again.'
@@ -152,8 +191,15 @@ export default function SignupScreen() {
             title="Create Account"
             onPress={handleSignup}
             loading={loading}
+            disabled={cooldown}
             style={styles.button}
           />
+
+          {cooldown && (
+            <Text style={styles.cooldownText}>
+              Please wait a few minutes before trying again.
+            </Text>
+          )}
 
           <View style={styles.footer}>
             <Text style={styles.footerText}>Already have an account? </Text>
@@ -186,6 +232,12 @@ const styles = StyleSheet.create({
     borderColor: '#E5E0D8',
   },
   button: { marginTop: 8 },
+  cooldownText: {
+    textAlign: 'center',
+    color: '#D9534F',
+    fontSize: 13,
+    marginTop: 4,
+  },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',

@@ -135,7 +135,10 @@ export default function CheckinScreen() {
           name: displayName,
         }}
       />
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={[styles.content, { paddingBottom: 90 }]} // 👈 added padding
+      >
         <Text style={styles.heading}>DAILY CHECK-IN</Text>
         <Text style={styles.subheading}>How was today?</Text>
         <Text style={styles.description}>Five quick fields. Honest answers make the score useful.</Text>

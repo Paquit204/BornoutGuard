@@ -1,0 +1,166 @@
+import Slider from '@react-native-community/slider';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import {
+    Alert,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
+import CustomButton from '../components/CustomButton';
+import TopBar from '../components/TopBar';
+import { supabase } from '../lib/supabase';
+
+const MOODS = ['😄', '😊', '😐', '😔', '😩'];
+const MOOD_LABELS = ['Happy', 'Neutral', 'Sad', 'Stressed', 'Anxious'];
+
+function Stepper({ value, min, max, step, label, unit, onChange }: any) {
+  return (
+    <View style={stepperStyles.container}>
+      <Text style={stepperStyles.label}>{label}</Text>
+      <View style={stepperStyles.controls}>
+        <TouchableOpacity style={stepperStyles.btn} onPress={() => onChange(Math.max(min, value - step))}>
+          <Text style={stepperStyles.btnText}>−</Text>
+        </TouchableOpacity>
+        <Text style={stepperStyles.value}>{value.toFixed(1)} {unit}</Text>
+        <TouchableOpacity style={stepperStyles.btn} onPress={() => onChange(Math.min(max, value + step))}>
+          <Text style={stepperStyles.btnText}>+</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+const stepperStyles = StyleSheet.create({
+  container: { gap: 4, marginBottom: 16 },
+  label: { fontSize: 14, fontWeight: '500', color: '#1B4332' },
+  controls: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  btn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#E5E0D8', justifyContent: 'center', alignItems: 'center' },
+  btnText: { fontSize: 22, fontWeight: '300', color: '#1B4332' },
+  value: { fontSize: 22, fontWeight: '700', color: '#1B4332' },
+});
+
+export default function CheckinEditScreen() {
+  const params = useLocalSearchParams();
+  const router = useRouter();
+  const checkinData = params.checkin ? JSON.parse(params.checkin as string) : null;
+
+  const [studyHours, setStudyHours] = useState(4);
+  const [sleepHours, setSleepHours] = useState(7);
+  const [assignments, setAssignments] = useState(2);
+  const [stressLevel, setStressLevel] = useState(5);
+  const [selectedMood, setSelectedMood] = useState(0);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (checkinData) {
+      setStudyHours(checkinData.study_hours);
+      setSleepHours(checkinData.sleep_hours);
+      setAssignments(checkinData.assignments);
+      setStressLevel(checkinData.stress_level);
+      const moodIndex = MOOD_LABELS.indexOf(checkinData.mood);
+      if (moodIndex !== -1) setSelectedMood(moodIndex);
+    }
+  }, [checkinData]);
+
+  const handleSave = async () => {
+    if (!checkinData) return;
+    setLoading(true);
+    const { error } = await supabase
+      .from('daily_checkins')
+      .update({
+        study_hours: studyHours,
+        sleep_hours: sleepHours,
+        assignments,
+        stress_level: stressLevel,
+        mood: MOOD_LABELS[selectedMood],
+      })
+      .eq('id', checkinData.id);
+
+    setLoading(false);
+    if (error) {
+      Alert.alert('Error', error.message);
+    } else {
+      Alert.alert('Success', 'Check-in updated.');
+      router.replace('/checkin-list');
+    }
+  };
+
+  if (!checkinData) {
+    return (
+      <View style={styles.centered}>
+        <Text>No check-in data found.</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.root}>
+      <TopBar showBack={true} />
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <Text style={styles.heading}>Edit Check-in</Text>
+        <Text style={styles.subheading}>Update your daily wellness data.</Text>
+
+        <Stepper label="Study hours" value={studyHours} min={0} max={16} step={0.5} unit="h" onChange={setStudyHours} />
+        <Stepper label="Sleep hours" value={sleepHours} min={0} max={12} step={0.5} unit="h" onChange={setSleepHours} />
+        <Stepper label="Open assignments" value={assignments} min={0} max={20} step={1} unit="" onChange={setAssignments} />
+
+        <Text style={styles.sliderLabel}>Stress level</Text>
+        <Slider
+          style={styles.slider}
+          minimumValue={1}
+          maximumValue={10}
+          step={1}
+          value={stressLevel}
+          onValueChange={setStressLevel}
+          minimumTrackTintColor="#2D6A4F"
+          maximumTrackTintColor="#E5E0D8"
+          thumbTintColor="#2D6A4F"
+        />
+        <View style={styles.sliderEnds}>
+          <Text style={styles.sliderEnd}>CALM</Text>
+          <Text style={styles.sliderEnd}>OVERWHELMED</Text>
+        </View>
+
+        <Text style={styles.sliderLabel}>Mood</Text>
+        <View style={styles.moodRow}>
+          {MOODS.map((emoji, i) => (
+            <TouchableOpacity
+              key={i}
+              style={[styles.moodBtn, selectedMood === i && styles.moodBtnSelected]}
+              onPress={() => setSelectedMood(i)}
+            >
+              <Text style={styles.moodEmoji}>{emoji}</Text>
+              <Text style={[styles.moodLabel, selectedMood === i && styles.moodLabelSelected]}>
+                {MOOD_LABELS[i]}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <CustomButton title="Update Check-in" onPress={handleSave} loading={loading} />
+      </ScrollView>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: '#F8F5F0' },
+  container: { flex: 1 },
+  content: { padding: 20, paddingBottom: 40 },
+  heading: { fontSize: 24, fontWeight: '700', color: '#1B4332', marginTop: 8 },
+  subheading: { fontSize: 14, color: '#5C6B6A', marginTop: 4, marginBottom: 20 },
+  sliderLabel: { fontSize: 14, fontWeight: '500', color: '#1B4332', marginBottom: 4 },
+  slider: { width: '100%', height: 40 },
+  sliderEnds: { flexDirection: 'row', justifyContent: 'space-between' },
+  sliderEnd: { fontSize: 12, color: '#5C6B6A' },
+  moodRow: { flexDirection: 'row', justifyContent: 'space-between', marginVertical: 12 },
+  moodBtn: { alignItems: 'center', paddingVertical: 8, paddingHorizontal: 4, borderRadius: 10, backgroundColor: '#E5E0D8', minWidth: 52 },
+  moodBtnSelected: { backgroundColor: '#2D6A4F' },
+  moodEmoji: { fontSize: 24 },
+  moodLabel: { fontSize: 10, color: '#5C6B6A', marginTop: 2 },
+  moodLabelSelected: { color: '#FFFFFF', fontWeight: '600' },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+});
