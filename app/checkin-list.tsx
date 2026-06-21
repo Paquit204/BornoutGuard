@@ -1,13 +1,13 @@
-import { useRouter } from 'expo-router';
+ import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import BottomNav from '../components/BottomNav';
 import TopBar from '../components/TopBar';
@@ -43,6 +43,19 @@ export default function CheckinListScreen() {
       setCheckins(data || []);
     }
     setLoading(false);
+  };
+
+  // ✅ "Add" button – duplicates the card's data into a new check-in
+  const handleAdd = (item: DailyCheckin) => {
+    router.push({
+      pathname: '/checkin',
+      params: {
+        studyHours: String(item.study_hours),
+        sleepHours: String(item.sleep_hours),
+        assignments: String(item.assignments),
+        stressLevel: String(item.stress_level),
+      },
+    });
   };
 
   const handleEdit = (checkin: DailyCheckin) => {
@@ -97,9 +110,15 @@ export default function CheckinListScreen() {
           <Text style={styles.detail}>😊 {item.mood}</Text>
         </View>
         <View style={styles.cardActions}>
+          {/* ✅ Add button first (green) */}
+          <TouchableOpacity style={[styles.actionBtn, styles.addBtn]} onPress={() => handleAdd(item)}>
+            <Text style={styles.actionText}>Add</Text>
+          </TouchableOpacity>
+          {/* Edit button (blue) */}
           <TouchableOpacity style={[styles.actionBtn, styles.editBtn]} onPress={() => handleEdit(item)}>
             <Text style={styles.actionText}>Edit</Text>
           </TouchableOpacity>
+          {/* Delete button (red) */}
           <TouchableOpacity style={[styles.actionBtn, styles.deleteBtn]} onPress={() => handleDelete(item.id)}>
             <Text style={styles.actionText}>Delete</Text>
           </TouchableOpacity>
@@ -122,7 +141,7 @@ export default function CheckinListScreen() {
       <View style={styles.container}>
         <Text style={styles.heading}>Manage Check-ins</Text>
         {checkins.length === 0 ? (
-          <Text style={styles.noData}>No check-ins found.</Text>
+          <Text style={styles.noData}>No check-ins found. Tap Add on any card to duplicate.</Text>
         ) : (
           <FlatList
             data={checkins}
@@ -157,13 +176,47 @@ const styles = StyleSheet.create({
   },
   cardDate: { fontSize: 14, fontWeight: '600', color: '#1B4332' },
   cardRisk: { fontSize: 14, fontWeight: '600' },
-  cardDetails: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
-  detail: { fontSize: 13, color: '#5C6B6A', backgroundColor: '#F3F4F6', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4 },
-  cardActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8 },
-  actionBtn: { paddingVertical: 6, paddingHorizontal: 14, borderRadius: 8 },
-  editBtn: { backgroundColor: '#2D6A4F' },
-  deleteBtn: { backgroundColor: '#D9534F' },
-  actionText: { color: '#FFFFFF', fontSize: 13, fontWeight: '500' },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F8F5F0' },
-  noData: { textAlign: 'center', color: '#5C6B6A', marginTop: 40 },
+  cardDetails: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 12,
+  },
+  detail: {
+    fontSize: 13,
+    color: '#5C6B6A',
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  cardActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    gap: 8,
+  },
+  actionBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+  },
+  addBtn: { backgroundColor: '#2D6A4F' },    // green
+  editBtn: { backgroundColor: '#2563EB' },    // blue
+  deleteBtn: { backgroundColor: '#D9534F' },  // red
+  actionText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F8F5F0',
+  },
+  noData: {
+    textAlign: 'center',
+    color: '#5C6B6A',
+    marginTop: 40,
+  },
 });

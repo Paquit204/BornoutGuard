@@ -7,7 +7,15 @@ import {
   Text,
   View,
 } from 'react-native';
-import Svg, { G, Line, Path, Rect, Text as SvgText } from 'react-native-svg';
+import Animated, {
+  Easing,
+  useAnimatedProps,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withTiming,
+} from 'react-native-reanimated';
+import Svg, { Circle, G, Line, Path, Rect, Text as SvgText } from 'react-native-svg';
 import BottomNav from '../components/BottomNav';
 import LoadingSpinner from '../components/LoadingSpinner';
 import TopBar from '../components/TopBar';
@@ -18,11 +26,107 @@ import { DailyCheckin } from '../types/database';
 const { width: screenWidth } = Dimensions.get('window');
 const CHART_HEIGHT = 180;
 const CHART_PADDING = { top: 10, bottom: 20, left: 30, right: 10 };
+const PIE_SIZE = 120;
 
-function buildLinePath(data: { x: number; y: number }[], chartWidth: number, chartHeight: number, yMax: number) {
+// ----- Helper: Pie slice path -----
+function pieSlicePath(cx: number, cy: number, r: number, startAngle: number, endAngle: number): string {
+  const startRad = (startAngle * Math.PI) / 180;
+  const endRad = (endAngle * Math.PI) / 180;
+  const x1 = cx + r * Math.cos(startRad);
+  const y1 = cy + r * Math.sin(startRad);
+  const x2 = cx + r * Math.cos(endRad);
+  const y2 = cy + r * Math.sin(endRad);
+  const largeArc = endAngle - startAngle > 180 ? 1 : 0;
+  return `M${cx},${cy} L${x1},${y1} A${r},${r} 0 ${largeArc},1 ${x2},${y2} Z`;
+}
+
+// ----- Animated Progress Bar -----
+function AnimatedProgressBar({ percentage, color }: { percentage: number; color: string }) {
+  const width = useSharedValue(0);
+
+  useEffect(() => {
+    width.value = withDelay(300, withTiming(percentage, { duration: 800, easing: Easing.out(Easing.ease) }));
+  }, []);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    width: `${width.value}%`,
+  }));
+
+  return (
+    <View style={barStyles.track}>
+      <Animated.View style={[barStyles.fill, animatedStyle, { backgroundColor: color }]} />
+    </View>
+  );
+}
+
+const barStyles = StyleSheet.create({
+  track: {
+    flex: 1,
+    height: 10,
+    backgroundColor: '#E5E0D8',
+    borderRadius: 5,
+    overflow: 'hidden',
+    marginHorizontal: 8,
+  },
+  fill: {
+    height: '100%',
+    borderRadius: 5,
+  },
+});
+
+// ----- Animated KPI Card -----
+function KpiCard({ value, label, color = '#1B4332' }: { value: string; label: string; color?: string }) {
+  const scale = useSharedValue(0.8);
+  const opacity = useSharedValue(0);
+
+  useEffect(() => {
+    scale.value = withTiming(1, { duration: 400, easing: Easing.out(Easing.ease) });
+    opacity.value = withTiming(1, { duration: 400 });
+  }, []);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+    opacity: opacity.value,
+  }));
+
+  return (
+    <Animated.View style={[styles.kpiCard, animatedStyle]}>
+      <Text style={[styles.kpiValue, { color }]}>{value}</Text>
+      <Text style={styles.kpiLabel}>{label}</Text>
+    </Animated.View>
+  );
+}
+
+// ----- Animated Line Chart with drawing effect -----
+const AnimatedPath = Animated.createAnimatedComponent(Path);
+
+function AnimatedLineChart({
+  data,
+  labels,
+  yMax,
+  color,
+  height = CHART_HEIGHT,
+  delay = 0,
+}: {
+  data: { x: number; y: number }[];
+  labels: string[];
+  yMax: number;
+  color: string;
+  height?: number;
+  delay?: number;
+}) {
+  if (data.length === 0) return null;
+
+  // Build path
+  const minPointWidth = 36;
+  const requiredWidth = data.length * minPointWidth + CHART_PADDING.left + CHART_PADDING.right;
+  const chartWidth = Math.max(screenWidth - 40, requiredWidth);
+  const chartHeight = height - CHART_PADDING.top - CHART_PADDING.bottom;
+
   const minX = Math.min(...data.map(d => d.x));
   const maxX = Math.max(...data.map(d => d.x));
   const xRange = maxX - minX || 1;
+
   let path = '';
   data.forEach((point, i) => {
     const x = CHART_PADDING.left + ((point.x - minX) / xRange) * chartWidth;
@@ -30,96 +134,152 @@ function buildLinePath(data: { x: number; y: number }[], chartWidth: number, cha
     if (i === 0) path = `M${x},${y}`;
     else path += ` L${x},${y}`;
   });
-  return path;
-}
 
-function LineChart({
-  data,
-  labels,
-  yMax,
-  color,
-  height = CHART_HEIGHT,
-}: {
-  data: { x: number; y: number }[];
-  labels: string[];
-  yMax: number;
-  color: string;
-  height?: number;
-}) {
-  if (data.length === 0) return null;
+  // Animation for stroke-dashoffset
+  const progress = useSharedValue(0);
+  const fadeOpacity = useSharedValue(0);
 
-  const minPointWidth = 36;
-  const requiredWidth = data.length * minPointWidth + CHART_PADDING.left + CHART_PADDING.right;
-  const chartWidth = Math.max(screenWidth - 40, requiredWidth);
+  useEffect(() => {
+    fadeOpacity.value = withDelay(delay, withTiming(1, { duration: 400 }));
+    progress.value = withDelay(delay, withTiming(1, { duration: 800, easing: Easing.out(Easing.ease) }));
+  }, []);
 
-  const chartHeight = height - CHART_PADDING.top - CHART_PADDING.bottom;
-  const path = buildLinePath(data, chartWidth, chartHeight, yMax);
+  const animatedPathProps = useAnimatedProps(() => {
+    // Approximate path length – use chartWidth as the max length
+    const pathLength = chartWidth + 100; // enough to cover the path
+    return {
+      strokeDashoffset: pathLength * (1 - progress.value),
+    };
+  });
 
+  const containerStyle = useAnimatedStyle(() => ({
+    opacity: fadeOpacity.value,
+  }));
+
+  // Y-axis ticks
   const yTicks = Array.from({ length: 6 }, (_, i) => Math.round((i / 5) * yMax));
-  const minX = Math.min(...data.map(d => d.x));
-  const maxX = Math.max(...data.map(d => d.x));
-  const xRange = maxX - minX || 1;
 
   return (
-    <Svg width={chartWidth} height={height}>
-      {yTicks.map((tick, i) => {
-        const y = CHART_PADDING.top + chartHeight - (tick / yMax) * chartHeight;
-        return (
-          <G key={i}>
-            <Line
-              x1={CHART_PADDING.left}
-              y1={y}
-              x2={chartWidth - CHART_PADDING.right}
-              y2={y}
-              stroke="#E5E0D8"
-              strokeWidth="0.5"
-              strokeDasharray="3,3"
-            />
+    <Animated.View style={containerStyle}>
+      <Svg width={chartWidth} height={height}>
+        {/* Grid lines & y-labels */}
+        {yTicks.map((tick, i) => {
+          const y = CHART_PADDING.top + chartHeight - (tick / yMax) * chartHeight;
+          return (
+            <G key={i}>
+              <Line
+                x1={CHART_PADDING.left}
+                y1={y}
+                x2={chartWidth - CHART_PADDING.right}
+                y2={y}
+                stroke="#E5E0D8"
+                strokeWidth="0.5"
+                strokeDasharray="3,3"
+              />
+              <SvgText
+                x={CHART_PADDING.left - 6}
+                y={y + 3}
+                fontSize="8"
+                fill="#A8A098"
+                textAnchor="end"
+              >
+                {tick}
+              </SvgText>
+            </G>
+          );
+        })}
+        {/* X labels */}
+        {data.map((point, i) => {
+          const x = CHART_PADDING.left + ((point.x - minX) / xRange) * chartWidth;
+          return (
             <SvgText
-              x={CHART_PADDING.left - 6}
-              y={y + 3}
+              key={i}
+              x={x}
+              y={height - 2}
               fontSize="8"
               fill="#A8A098"
-              textAnchor="end"
+              textAnchor="middle"
+              transform={`rotate(-30, ${x}, ${height - 2})`}
             >
-              {tick}
+              {labels[i] || ''}
             </SvgText>
-          </G>
-        );
-      })}
-      {data.map((point, i) => {
-        const x = CHART_PADDING.left + ((point.x - minX) / xRange) * chartWidth;
-        return (
-          <SvgText
-            key={i}
-            x={x}
-            y={height - 2}
-            fontSize="8"
-            fill="#A8A098"
-            textAnchor="middle"
-            transform={`rotate(-30, ${x}, ${height - 2})`}
-          >
-            {labels[i] || ''}
-          </SvgText>
-        );
-      })}
-      <Path d={path} stroke={color} strokeWidth="2" fill="none" />
-      {data.map((point, i) => {
-        const x = CHART_PADDING.left + ((point.x - minX) / xRange) * chartWidth;
-        const y = CHART_PADDING.top + chartHeight - (point.y / yMax) * chartHeight;
-        return (
-          <Rect
-            key={i}
-            x={x - 3}
-            y={y - 3}
-            width="6"
-            height="6"
-            rx="3"
-            fill={color}
-          />
-        );
-      })}
-    </Svg>
+          );
+        })}
+        {/* Animated line */}
+        <AnimatedPath
+          d={path}
+          stroke={color}
+          strokeWidth="2"
+          fill="none"
+          strokeDasharray={`${chartWidth + 100}`}
+          animatedProps={animatedPathProps}
+        />
+        {/* Data dots – appear after line draw */}
+        {data.map((point, i) => {
+          const x = CHART_PADDING.left + ((point.x - minX) / xRange) * chartWidth;
+          const y = CHART_PADDING.top + chartHeight - (point.y / yMax) * chartHeight;
+          return (
+            <Rect
+              key={i}
+              x={x - 3}
+              y={y - 3}
+              width="6"
+              height="6"
+              rx="3"
+              fill={color}
+              opacity={1} // could animate too, but fine
+            />
+          );
+        })}
+      </Svg>
+    </Animated.View>
+  );
+}
+
+// ----- Animated Pie Chart -----
+function AnimatedPieChart({
+  data,
+  colors,
+  size = PIE_SIZE,
+}: {
+  data: { label: string; value: number }[];
+  colors: string[];
+  size?: number;
+}) {
+  const total = data.reduce((sum, d) => sum + d.value, 0);
+  if (total === 0) return <Text style={{ color: '#A8A098' }}>No data</Text>;
+
+  const scale = useSharedValue(0);
+  const opacity = useSharedValue(0);
+
+  useEffect(() => {
+    scale.value = withTiming(1, { duration: 600, easing: Easing.out(Easing.ease) });
+    opacity.value = withTiming(1, { duration: 400 });
+  }, []);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+    opacity: opacity.value,
+  }));
+
+  const cx = size / 2;
+  const cy = size / 2;
+  const r = size / 2 - 10;
+  let startAngle = 0;
+
+  return (
+    <Animated.View style={animatedStyle}>
+      <Svg width={size} height={size}>
+        {data.map((item, i) => {
+          const angle = (item.value / total) * 360;
+          const endAngle = startAngle + angle;
+          const path = pieSlicePath(cx, cy, r, startAngle, endAngle);
+          startAngle = endAngle;
+          return <Path key={i} d={path} fill={colors[i]} stroke="#FFFFFF" strokeWidth="2" />;
+        })}
+        <Circle cx={cx} cy={cy} r={r * 0.5} fill="#FFFFFF" />
+      </Svg>
+    </Animated.View>
   );
 }
 
@@ -168,7 +328,16 @@ export default function AnalyticsScreen() {
 
   const riskCounts = { Low: 0, Moderate: 0, High: 0 };
   last14.forEach((c) => riskCounts[c.risk_level]++);
-  const total = last14.length || 1;
+  const totalRisk = last14.length || 1;
+
+  const pieData = [
+    { label: 'Low', value: riskCounts.Low },
+    { label: 'Moderate', value: riskCounts.Moderate },
+    { label: 'High', value: riskCounts.High },
+  ];
+  const pieColors = ['#2D6A4F', '#E8A838', '#D9534F'];
+  const riskLabels = ['Low', 'Moderate', 'High'];
+  const riskColors = ['#2D6A4F', '#E8A838', '#D9534F'];
 
   const displayName = profile?.full_name || profile?.email?.split('@')[0] || 'Student';
 
@@ -182,7 +351,7 @@ export default function AnalyticsScreen() {
       />
       <ScrollView
         style={styles.container}
-        contentContainerStyle={[styles.content, { paddingBottom: 90 }]} // 👈 added padding
+        contentContainerStyle={[styles.content, { paddingBottom: 90 }]}
       >
         <Text style={styles.heading}>Your trends.</Text>
         <Text style={styles.subheading}>Patterns are easier to fix than moments.</Text>
@@ -195,89 +364,88 @@ export default function AnalyticsScreen() {
           </View>
         ) : (
           <>
-            <View style={styles.statsRow}>
-              <View style={styles.statCard}>
-                <Text style={styles.statValue}>{avgScore}</Text>
-                <Text style={styles.statLabel}>AVG SCORE</Text>
-              </View>
-              <View style={styles.statCard}>
-                <Text style={styles.statValue}>{avgSleep}h</Text>
-                <Text style={styles.statLabel}>SLEEP</Text>
-              </View>
-              <View style={styles.statCard}>
-                <Text style={styles.statValue}>{avgStudy}h</Text>
-                <Text style={styles.statLabel}>STUDY</Text>
-              </View>
-              <View style={styles.statCard}>
-                <Text style={styles.statValue}>{days}</Text>
-                <Text style={styles.statLabel}>DAYS</Text>
-              </View>
+            {/* KPI Cards */}
+            <View style={styles.kpiRow}>
+              <KpiCard value={`${avgScore}`} label="AVG SCORE" color="#2D6A4F" />
+              <KpiCard value={`${avgSleep}h`} label="SLEEP" />
+              <KpiCard value={`${avgStudy}h`} label="STUDY" />
+              <KpiCard value={`${days}`} label="DAYS" />
             </View>
+
+            {/* Trend Analysis */}
+            <Text style={styles.sectionTitle}>Trend Analysis</Text>
 
             <Text style={styles.chartTitle}>BURNOUT TREND</Text>
             <View style={styles.chartCard}>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                <LineChart
-                  data={burnoutData}
-                  labels={xLabels}
-                  yMax={100}
-                  color="#2D6A4F"
-                />
-              </ScrollView>
+              <AnimatedLineChart
+                data={burnoutData}
+                labels={xLabels}
+                yMax={100}
+                color="#2D6A4F"
+                delay={0}
+              />
             </View>
 
             <Text style={styles.chartTitle}>STRESS LEVEL</Text>
             <View style={styles.chartCard}>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                <LineChart
-                  data={stressData}
-                  labels={xLabels}
-                  yMax={10}
-                  color="#E8A838"
-                />
-              </ScrollView>
+              <AnimatedLineChart
+                data={stressData}
+                labels={xLabels}
+                yMax={10}
+                color="#E8A838"
+                delay={200}
+              />
             </View>
 
             <Text style={styles.chartTitle}>SLEEP VS STUDY</Text>
             <View style={[styles.chartCard, { position: 'relative' }]}>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                <View style={{ position: 'relative', flexDirection: 'row' }}>
-                  <LineChart
-                    data={sleepData}
+              <View style={{ position: 'relative', flexDirection: 'row' }}>
+                <AnimatedLineChart
+                  data={sleepData}
+                  labels={xLabels}
+                  yMax={12}
+                  color="#2D6A4F"
+                  delay={400}
+                />
+                <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+                  <AnimatedLineChart
+                    data={studyData}
                     labels={xLabels}
                     yMax={12}
-                    color="#2D6A4F"
+                    color="#E8A838"
+                    delay={600}
                   />
-                  <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
-                    <LineChart
-                      data={studyData}
-                      labels={xLabels}
-                      yMax={12}
-                      color="#E8A838"
-                    />
-                  </View>
                 </View>
-              </ScrollView>
+              </View>
             </View>
 
-            <Text style={styles.chartTitle}>RISK DISTRIBUTION</Text>
+            {/* Risk Distribution */}
+            <Text style={styles.sectionTitle}>Risk Distribution</Text>
             <View style={styles.riskCard}>
-              {Object.entries(riskCounts).map(([level, count]) => {
-                const pct = Math.round((count / total) * 100);
-                const color =
-                  level === 'Low' ? '#2D6A4F' : level === 'Moderate' ? '#E8A838' : '#D9534F';
-                return (
-                  <View key={level} style={styles.riskRow}>
-                    <Text style={[styles.riskLabel, { color }]}>{level}</Text>
-                    <View style={styles.riskBarBg}>
-                      <View
-                        style={[
-                          styles.riskBarFill,
-                          { width: `${pct}%`, backgroundColor: color },
-                        ]}
-                      />
+              <View style={styles.pieContainer}>
+                <AnimatedPieChart data={pieData} colors={pieColors} size={120} />
+                <View style={styles.legendContainer}>
+                  {pieData.map((item, i) => (
+                    <View key={i} style={styles.legendItem}>
+                      <View style={[styles.legendColor, { backgroundColor: pieColors[i] }]} />
+                      <Text style={styles.legendText}>{item.label}</Text>
+                      <Text style={styles.legendPercent}>
+                        {totalRisk > 0 ? Math.round((item.value / totalRisk) * 100) : 0}%
+                      </Text>
                     </View>
-                    <Text style={styles.riskPct}>{count} ({pct}%)</Text>
+                  ))}
+                </View>
+              </View>
+
+              {riskLabels.map((label, i) => {
+                const count = riskCounts[label as keyof typeof riskCounts];
+                const pct = totalRisk > 0 ? Math.round((count / totalRisk) * 100) : 0;
+                const color = riskColors[i];
+                return (
+                  <View key={label} style={styles.barRow}>
+                    <Text style={styles.barLabel}>{label}</Text>
+                    <AnimatedProgressBar percentage={pct} color={color} />
+                    <Text style={styles.barPercent}>{pct}%</Text>
                   </View>
                 );
               })}
@@ -296,22 +464,48 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 20, paddingBottom: 20 },
   heading: { fontSize: 22, fontWeight: '700', color: '#1B4332', marginTop: 8 },
   subheading: { fontSize: 14, color: '#5C6B6A', marginBottom: 16 },
-  statsRow: {
+
+  // KPI Cards
+  kpiRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    marginBottom: 16,
+    gap: 8,
+  },
+  kpiCard: {
+    flex: 1,
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    padding: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+    alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 4,
     elevation: 2,
-    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#E5E0D8',
   },
-  statCard: { alignItems: 'center', flex: 1 },
-  statValue: { fontSize: 20, fontWeight: '700', color: '#1B4332' },
-  statLabel: { fontSize: 10, color: '#A8A098', marginTop: 2, letterSpacing: 0.5 },
+  kpiValue: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  kpiLabel: {
+    fontSize: 10,
+    color: '#A8A098',
+    marginTop: 2,
+    letterSpacing: 0.5,
+  },
+
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1B4332',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+
   chartTitle: {
     fontSize: 14,
     fontWeight: '600',
@@ -332,6 +526,8 @@ const styles = StyleSheet.create({
     minHeight: CHART_HEIGHT,
     overflow: 'hidden',
   },
+
+  // Risk Card
   riskCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
@@ -343,22 +539,56 @@ const styles = StyleSheet.create({
     elevation: 2,
     marginBottom: 12,
   },
-  riskRow: {
+  pieContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    justifyContent: 'space-around',
     marginBottom: 12,
   },
-  riskLabel: { width: 70, fontSize: 13, fontWeight: '600' },
-  riskBarBg: {
-    flex: 1,
-    height: 10,
-    backgroundColor: '#E5E0D8',
-    borderRadius: 5,
-    overflow: 'hidden',
+  legendContainer: {
+    justifyContent: 'center',
+    gap: 6,
   },
-  riskBarFill: { height: '100%', borderRadius: 5 },
-  riskPct: { color: '#5C6B6A', fontSize: 11, width: 60, textAlign: 'right' },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  legendColor: {
+    width: 16,
+    height: 16,
+    borderRadius: 4,
+  },
+  legendText: {
+    fontSize: 14,
+    color: '#1B4332',
+    fontWeight: '500',
+    width: 70,
+  },
+  legendPercent: {
+    fontSize: 14,
+    color: '#5C6B6A',
+    fontWeight: '600',
+  },
+  barRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  barLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#1B4332',
+    width: 70,
+  },
+  barPercent: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#5C6B6A',
+    width: 40,
+    textAlign: 'right',
+  },
+
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',

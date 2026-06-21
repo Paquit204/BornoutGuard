@@ -1,13 +1,16 @@
- import { usePathname, useRouter } from 'expo-router';
+ import { Feather } from '@expo/vector-icons';
+import { usePathname, useRouter } from 'expo-router';
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const tabs = [
-  { name: 'Home', path: '/dashboard', icon: '🏠' },
-  { name: 'Check-in', path: '/checkin', icon: '📋' },
-  { name: 'Trends', path: '/analytics', icon: '📊' },
-  { name: 'Profile', path: '/profile', icon: '👤' },
+type FeatherIconName = keyof typeof Feather.glyphMap;
+
+const tabs: { name: string; path: string; icon: FeatherIconName }[] = [
+  { name: 'Home', path: '/dashboard', icon: 'home' },
+  { name: 'Check-in', path: '/checkin', icon: 'clipboard' },
+  { name: 'Trends', path: '/analytics', icon: 'bar-chart-2' },
+  { name: 'Profile', path: '/profile', icon: 'user' },
 ];
 
 export default function BottomNav() {
@@ -18,7 +21,7 @@ export default function BottomNav() {
   if (pathname === '/login' || pathname === '/signup') return null;
 
   return (
-    <View style={[styles.container, { paddingBottom: insets.bottom || 0 }]}>
+    <View style={[styles.container, { paddingBottom: insets.bottom || 12 }]}>
       <View style={styles.bar}>
         {tabs.map((tab) => {
           const isActive = pathname === tab.path;
@@ -30,9 +33,11 @@ export default function BottomNav() {
               activeOpacity={0.7}
             >
               <View style={[styles.iconWrapper, isActive && styles.activeIconWrapper]}>
-                <Text style={[styles.icon, isActive && styles.iconActive]}>
-                  {tab.icon}
-                </Text>
+                <Feather
+                  name={tab.icon}
+                  size={22}
+                  color="#A8A098" // always gray – no color change
+                />
               </View>
             </TouchableOpacity>
           );
@@ -48,16 +53,26 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: '#F0EDE8',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 0,
+    backgroundColor: 'transparent',
   },
   bar: {
     flexDirection: 'row',
     backgroundColor: '#FFFFFF',
-    paddingVertical: 6,
-    paddingHorizontal: 0,
+    borderRadius: 30,
+    paddingVertical: 4,
+    paddingHorizontal: 4,
     width: '100%',
+    maxWidth: 500,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 10,
+    borderWidth: 1,
+    borderColor: '#F0EDE8',
   },
   tab: {
     flex: 1,
@@ -73,13 +88,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   activeIconWrapper: {
-    backgroundColor: '#E8F5E9', // light green circle
-  },
-  icon: {
-    fontSize: 22,
-    color: '#A8A098', // monochrome gray
-  },
-  iconActive: {
-    color: '#2D6A4F',
+    backgroundColor: '#E8F5E9', // light green circle – only background changes
   },
 });

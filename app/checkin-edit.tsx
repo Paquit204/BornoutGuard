@@ -1,31 +1,57 @@
-import Slider from '@react-native-community/slider';
+ import Slider from '@react-native-community/slider';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-    Alert,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import CustomButton from '../components/CustomButton';
 import TopBar from '../components/TopBar';
 import { supabase } from '../lib/supabase';
+import { calculateBurnout } from '../services/burnoutCalculator';
 
 const MOODS = ['😄', '😊', '😐', '😔', '😩'];
 const MOOD_LABELS = ['Happy', 'Neutral', 'Sad', 'Stressed', 'Anxious'];
 
-function Stepper({ value, min, max, step, label, unit, onChange }: any) {
+// ✅ Working Stepper (same as checkin.tsx)
+function Stepper({
+  value,
+  min,
+  max,
+  step = 0.5,
+  label,
+  unit,
+  onChange,
+}: {
+  value: number;
+  min: number;
+  max: number;
+  step?: number;
+  label: string;
+  unit: string;
+  onChange: (v: number) => void;
+}) {
   return (
     <View style={stepperStyles.container}>
       <Text style={stepperStyles.label}>{label}</Text>
       <View style={stepperStyles.controls}>
-        <TouchableOpacity style={stepperStyles.btn} onPress={() => onChange(Math.max(min, value - step))}>
+        <TouchableOpacity
+          style={stepperStyles.btn}
+          onPress={() => onChange(Math.max(min, +(value - step).toFixed(1)))}
+        >
           <Text style={stepperStyles.btnText}>−</Text>
         </TouchableOpacity>
-        <Text style={stepperStyles.value}>{value.toFixed(1)} {unit}</Text>
-        <TouchableOpacity style={stepperStyles.btn} onPress={() => onChange(Math.min(max, value + step))}>
+        <Text style={stepperStyles.value}>
+          {value} <Text style={stepperStyles.unit}>{unit}</Text>
+        </Text>
+        <TouchableOpacity
+          style={stepperStyles.btn}
+          onPress={() => onChange(Math.min(max, +(value + step).toFixed(1)))}
+        >
           <Text style={stepperStyles.btnText}>+</Text>
         </TouchableOpacity>
       </View>
@@ -34,18 +60,30 @@ function Stepper({ value, min, max, step, label, unit, onChange }: any) {
 }
 
 const stepperStyles = StyleSheet.create({
-  container: { gap: 4, marginBottom: 16 },
+  container: { gap: 4 },
   label: { fontSize: 14, fontWeight: '500', color: '#1B4332' },
-  controls: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  btn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#E5E0D8', justifyContent: 'center', alignItems: 'center' },
+  controls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  btn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#E5E0D8',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   btnText: { fontSize: 22, fontWeight: '300', color: '#1B4332' },
   value: { fontSize: 22, fontWeight: '700', color: '#1B4332' },
+  unit: { fontSize: 14, fontWeight: '400', color: '#5C6B6A' },
 });
 
 export default function CheckinEditScreen() {
   const params = useLocalSearchParams();
   const router = useRouter();
-  const checkinData = params.checkin ? JSON.parse(params.checkin as string) : null;
+  const loaded = useRef(false); // ✅ prevent re-loading
 
   const [studyHours, setStudyHours] = useState(4);
   const [sleepHours, setSleepHours] = useState(7);
@@ -54,20 +92,37 @@ export default function CheckinEditScreen() {
   const [selectedMood, setSelectedMood] = useState(0);
   const [loading, setLoading] = useState(false);
 
+  // ✅ Load data only once when the screen opens
   useEffect(() => {
-    if (checkinData) {
-      setStudyHours(checkinData.study_hours);
-      setSleepHours(checkinData.sleep_hours);
-      setAssignments(checkinData.assignments);
-      setStressLevel(checkinData.stress_level);
-      const moodIndex = MOOD_LABELS.indexOf(checkinData.mood);
-      if (moodIndex !== -1) setSelectedMood(moodIndex);
+    if (loaded.current) return;
+    if (params.checkin) {
+      try {
+        const data = JSON.parse(params.checkin as string);
+        setStudyHours(data.study_hours);
+        setSleepHours(data.sleep_hours);
+        setAssignments(data.assignments);
+        setStressLevel(data.stress_level);
+        const moodIndex = MOOD_LABELS.indexOf(data.mood);
+        if (moodIndex !== -1) setSelectedMood(moodIndex);
+        loaded.current = true;
+      } catch (e) {
+        console.log('Error parsing checkin data', e);
+      }
     }
-  }, [checkinData]);
+  }, []); // ✅ runs only once (empty dependency array)
+
+  // Live preview
+  const preview = calculateBurnout(stressLevel, sleepHours, studyHours, assignments);
+  const previewColor =
+    preview.risk_level === 'Low' ? '#2D6A4F' : preview.risk_level === 'Moderate' ? '#E8A838' : '#D9534F';
 
   const handleSave = async () => {
-    if (!checkinData) return;
+    if (!params.checkin) return;
     setLoading(true);
+
+    const data = JSON.parse(params.checkin as string);
+    const result = calculateBurnout(stressLevel, sleepHours, studyHours, assignments);
+
     const { error } = await supabase
       .from('daily_checkins')
       .update({
@@ -76,30 +131,24 @@ export default function CheckinEditScreen() {
         assignments,
         stress_level: stressLevel,
         mood: MOOD_LABELS[selectedMood],
+        burnout_score: result.score,
+        risk_level: result.risk_level,
       })
-      .eq('id', checkinData.id);
+      .eq('id', data.id);
 
     setLoading(false);
     if (error) {
       Alert.alert('Error', error.message);
     } else {
-      Alert.alert('Success', 'Check-in updated.');
+      Alert.alert('Success', 'Check-in updated successfully.');
       router.replace('/checkin-list');
     }
   };
 
-  if (!checkinData) {
-    return (
-      <View style={styles.centered}>
-        <Text>No check-in data found.</Text>
-      </View>
-    );
-  }
-
   return (
     <View style={styles.root}>
       <TopBar showBack={true} />
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <ScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingBottom: 90 }]}>
         <Text style={styles.heading}>Edit Check-in</Text>
         <Text style={styles.subheading}>Update your daily wellness data.</Text>
 
@@ -140,6 +189,17 @@ export default function CheckinEditScreen() {
           ))}
         </View>
 
+        <View style={styles.previewCard}>
+          <Text style={styles.previewLabel}>LIVE PREVIEW</Text>
+          <View style={styles.previewRow}>
+            <Text style={[styles.previewScore, { color: previewColor }]}>{preview.score}</Text>
+            <Text style={styles.previewMax}>/ 100</Text>
+          </View>
+          <Text style={[styles.previewRisk, { color: previewColor }]}>
+            {preview.risk_level} risk
+          </Text>
+        </View>
+
         <CustomButton title="Update Check-in" onPress={handleSave} loading={loading} />
       </ScrollView>
     </View>
@@ -157,10 +217,33 @@ const styles = StyleSheet.create({
   sliderEnds: { flexDirection: 'row', justifyContent: 'space-between' },
   sliderEnd: { fontSize: 12, color: '#5C6B6A' },
   moodRow: { flexDirection: 'row', justifyContent: 'space-between', marginVertical: 12 },
-  moodBtn: { alignItems: 'center', paddingVertical: 8, paddingHorizontal: 4, borderRadius: 10, backgroundColor: '#E5E0D8', minWidth: 52 },
+  moodBtn: {
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    borderRadius: 10,
+    backgroundColor: '#E5E0D8',
+    minWidth: 52,
+  },
   moodBtnSelected: { backgroundColor: '#2D6A4F' },
   moodEmoji: { fontSize: 24 },
   moodLabel: { fontSize: 10, color: '#5C6B6A', marginTop: 2 },
   moodLabelSelected: { color: '#FFFFFF', fontWeight: '600' },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  previewCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
+    marginBottom: 16,
+  },
+  previewLabel: { fontSize: 12, fontWeight: '600', color: '#5C6B6A', letterSpacing: 0.5 },
+  previewRow: { flexDirection: 'row', alignItems: 'baseline', marginTop: 4 },
+  previewScore: { fontSize: 40, fontWeight: '800' },
+  previewMax: { fontSize: 14, color: '#A8A098', marginLeft: 4 },
+  previewRisk: { fontSize: 14, fontWeight: '600', marginTop: 2 },
 });

@@ -1,6 +1,6 @@
  import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -32,7 +32,15 @@ export default function SplashScreen() {
     <View style={styles.container}>
       <Animated.View style={[styles.content, animatedStyle]}>
         <View style={styles.iconContainer}>
-          <Text style={styles.icon}>🧠</Text>
+          {/* Fallback emoji (always visible) */}
+          <Text style={styles.fallbackIcon}>🧠</Text>
+          {/* Your custom logo – shows on top of emoji when loaded */}
+          <Image
+            source={require('../assets/images/BornoutGuard.png')}
+            style={styles.logo}
+            resizeMode="contain"
+            onError={() => console.log('Splash logo not found')}
+          />
         </View>
         <Text style={styles.title}>BurnoutGuard</Text>
         <Text style={styles.subtitle}>Academic Stress Monitor</Text>
@@ -50,8 +58,8 @@ const styles = StyleSheet.create({
   },
   content: { alignItems: 'center' },
   iconContainer: {
-    width: 100,
-    height: 100,
+    width: 120,
+    height: 120,
     borderRadius: 24,
     backgroundColor: '#FFFFFF',
     justifyContent: 'center',
@@ -62,8 +70,20 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.06,
     shadowRadius: 8,
     elevation: 4,
+    position: 'relative', // needed for absolute positioning of emoji
+    overflow: 'hidden',
+    padding: 12,
   },
-  icon: { fontSize: 48 },
+  fallbackIcon: {
+    fontSize: 60,
+    position: 'absolute',
+    color: '#2D6A4F',
+  },
+  logo: {
+    width: 80,
+    height: 80,
+    zIndex: 1, // image stays on top of emoji
+  },
   title: {
     fontSize: 32,
     fontWeight: '700',
