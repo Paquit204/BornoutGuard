@@ -19,6 +19,7 @@ import Svg, { Circle, G, Line, Path, Rect, Text as SvgText } from 'react-native-
 import BottomNav from '../components/BottomNav';
 import LoadingSpinner from '../components/LoadingSpinner';
 import TopBar from '../components/TopBar';
+import { Colors, Shadows, Spacing, Typography } from '../constants/theme';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { DailyCheckin } from '../types/database';
@@ -28,7 +29,6 @@ const CHART_HEIGHT = 180;
 const CHART_PADDING = { top: 10, bottom: 20, left: 30, right: 10 };
 const PIE_SIZE = 120;
 
-// ----- Helper: Pie slice path -----
 function pieSlicePath(cx: number, cy: number, r: number, startAngle: number, endAngle: number): string {
   const startRad = (startAngle * Math.PI) / 180;
   const endRad = (endAngle * Math.PI) / 180;
@@ -40,7 +40,6 @@ function pieSlicePath(cx: number, cy: number, r: number, startAngle: number, end
   return `M${cx},${cy} L${x1},${y1} A${r},${r} 0 ${largeArc},1 ${x2},${y2} Z`;
 }
 
-// ----- Animated Progress Bar -----
 function AnimatedProgressBar({ percentage, color }: { percentage: number; color: string }) {
   const width = useSharedValue(0);
 
@@ -63,10 +62,10 @@ const barStyles = StyleSheet.create({
   track: {
     flex: 1,
     height: 10,
-    backgroundColor: '#E5E0D8',
+    backgroundColor: Colors.border,
     borderRadius: 5,
     overflow: 'hidden',
-    marginHorizontal: 8,
+    marginHorizontal: Spacing.sm,
   },
   fill: {
     height: '100%',
@@ -74,8 +73,7 @@ const barStyles = StyleSheet.create({
   },
 });
 
-// ----- Animated KPI Card -----
-function KpiCard({ value, label, color = '#1B4332' }: { value: string; label: string; color?: string }) {
+function KpiCard({ value, label, color = Colors.primary }: { value: string; label: string; color?: string }) {
   const scale = useSharedValue(0.8);
   const opacity = useSharedValue(0);
 
@@ -97,7 +95,6 @@ function KpiCard({ value, label, color = '#1B4332' }: { value: string; label: st
   );
 }
 
-// ----- Animated Line Chart with drawing effect -----
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 
 function AnimatedLineChart({
@@ -117,7 +114,6 @@ function AnimatedLineChart({
 }) {
   if (data.length === 0) return null;
 
-  // Build path
   const minPointWidth = 36;
   const requiredWidth = data.length * minPointWidth + CHART_PADDING.left + CHART_PADDING.right;
   const chartWidth = Math.max(screenWidth - 40, requiredWidth);
@@ -135,7 +131,6 @@ function AnimatedLineChart({
     else path += ` L${x},${y}`;
   });
 
-  // Animation for stroke-dashoffset
   const progress = useSharedValue(0);
   const fadeOpacity = useSharedValue(0);
 
@@ -145,8 +140,7 @@ function AnimatedLineChart({
   }, []);
 
   const animatedPathProps = useAnimatedProps(() => {
-    // Approximate path length – use chartWidth as the max length
-    const pathLength = chartWidth + 100; // enough to cover the path
+    const pathLength = chartWidth + 100;
     return {
       strokeDashoffset: pathLength * (1 - progress.value),
     };
@@ -156,13 +150,11 @@ function AnimatedLineChart({
     opacity: fadeOpacity.value,
   }));
 
-  // Y-axis ticks
   const yTicks = Array.from({ length: 6 }, (_, i) => Math.round((i / 5) * yMax));
 
   return (
     <Animated.View style={containerStyle}>
       <Svg width={chartWidth} height={height}>
-        {/* Grid lines & y-labels */}
         {yTicks.map((tick, i) => {
           const y = CHART_PADDING.top + chartHeight - (tick / yMax) * chartHeight;
           return (
@@ -172,7 +164,7 @@ function AnimatedLineChart({
                 y1={y}
                 x2={chartWidth - CHART_PADDING.right}
                 y2={y}
-                stroke="#E5E0D8"
+                stroke={Colors.border}
                 strokeWidth="0.5"
                 strokeDasharray="3,3"
               />
@@ -180,7 +172,7 @@ function AnimatedLineChart({
                 x={CHART_PADDING.left - 6}
                 y={y + 3}
                 fontSize="8"
-                fill="#A8A098"
+                fill={Colors.textMuted}
                 textAnchor="end"
               >
                 {tick}
@@ -188,7 +180,6 @@ function AnimatedLineChart({
             </G>
           );
         })}
-        {/* X labels */}
         {data.map((point, i) => {
           const x = CHART_PADDING.left + ((point.x - minX) / xRange) * chartWidth;
           return (
@@ -197,7 +188,7 @@ function AnimatedLineChart({
               x={x}
               y={height - 2}
               fontSize="8"
-              fill="#A8A098"
+              fill={Colors.textMuted}
               textAnchor="middle"
               transform={`rotate(-30, ${x}, ${height - 2})`}
             >
@@ -205,7 +196,6 @@ function AnimatedLineChart({
             </SvgText>
           );
         })}
-        {/* Animated line */}
         <AnimatedPath
           d={path}
           stroke={color}
@@ -214,7 +204,6 @@ function AnimatedLineChart({
           strokeDasharray={`${chartWidth + 100}`}
           animatedProps={animatedPathProps}
         />
-        {/* Data dots – appear after line draw */}
         {data.map((point, i) => {
           const x = CHART_PADDING.left + ((point.x - minX) / xRange) * chartWidth;
           const y = CHART_PADDING.top + chartHeight - (point.y / yMax) * chartHeight;
@@ -227,7 +216,7 @@ function AnimatedLineChart({
               height="6"
               rx="3"
               fill={color}
-              opacity={1} // could animate too, but fine
+              opacity={1}
             />
           );
         })}
@@ -236,7 +225,6 @@ function AnimatedLineChart({
   );
 }
 
-// ----- Animated Pie Chart -----
 function AnimatedPieChart({
   data,
   colors,
@@ -247,7 +235,7 @@ function AnimatedPieChart({
   size?: number;
 }) {
   const total = data.reduce((sum, d) => sum + d.value, 0);
-  if (total === 0) return <Text style={{ color: '#A8A098' }}>No data</Text>;
+  if (total === 0) return <Text style={{ color: Colors.textMuted }}>No data</Text>;
 
   const scale = useSharedValue(0);
   const opacity = useSharedValue(0);
@@ -335,20 +323,15 @@ export default function AnalyticsScreen() {
     { label: 'Moderate', value: riskCounts.Moderate },
     { label: 'High', value: riskCounts.High },
   ];
-  const pieColors = ['#2D6A4F', '#E8A838', '#D9534F'];
+  const pieColors = [Colors.success, Colors.warning, Colors.danger];
   const riskLabels = ['Low', 'Moderate', 'High'];
-  const riskColors = ['#2D6A4F', '#E8A838', '#D9534F'];
+  const riskColors = [Colors.success, Colors.warning, Colors.danger];
 
   const displayName = profile?.full_name || profile?.email?.split('@')[0] || 'Student';
 
   return (
     <View style={styles.root}>
-      <TopBar
-        showProfile={true}
-        profile={{
-          name: displayName,
-        }}
-      />
+      <TopBar showProfile profile={{ name: displayName }} />
       <ScrollView
         style={styles.container}
         contentContainerStyle={[styles.content, { paddingBottom: 90 }]}
@@ -362,17 +345,15 @@ export default function AnalyticsScreen() {
             <Text style={styles.emptyTitle}>No Data Yet</Text>
             <Text style={styles.emptyText}>Complete daily check-ins to see your trends here.</Text>
           </View>
-        ) : (
+          ) : (
           <>
-            {/* KPI Cards */}
             <View style={styles.kpiRow}>
-              <KpiCard value={`${avgScore}`} label="AVG SCORE" color="#2D6A4F" />
+              <KpiCard value={`${avgScore}`} label="AVG SCORE" color={Colors.primary} />
               <KpiCard value={`${avgSleep}h`} label="SLEEP" />
               <KpiCard value={`${avgStudy}h`} label="STUDY" />
               <KpiCard value={`${days}`} label="DAYS" />
             </View>
 
-            {/* Trend Analysis */}
             <Text style={styles.sectionTitle}>Trend Analysis</Text>
 
             <Text style={styles.chartTitle}>BURNOUT TREND</Text>
@@ -381,7 +362,7 @@ export default function AnalyticsScreen() {
                 data={burnoutData}
                 labels={xLabels}
                 yMax={100}
-                color="#2D6A4F"
+                color={Colors.primary}
                 delay={0}
               />
             </View>
@@ -392,7 +373,7 @@ export default function AnalyticsScreen() {
                 data={stressData}
                 labels={xLabels}
                 yMax={10}
-                color="#E8A838"
+                color={Colors.warning}
                 delay={200}
               />
             </View>
@@ -404,7 +385,7 @@ export default function AnalyticsScreen() {
                   data={sleepData}
                   labels={xLabels}
                   yMax={12}
-                  color="#2D6A4F"
+                  color={Colors.primary}
                   delay={400}
                 />
                 <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
@@ -412,14 +393,13 @@ export default function AnalyticsScreen() {
                     data={studyData}
                     labels={xLabels}
                     yMax={12}
-                    color="#E8A838"
+                    color={Colors.warning}
                     delay={600}
                   />
                 </View>
               </View>
             </View>
 
-            {/* Risk Distribution */}
             <Text style={styles.sectionTitle}>Risk Distribution</Text>
             <View style={styles.riskCard}>
               <View style={styles.pieContainer}>
@@ -459,143 +439,74 @@ export default function AnalyticsScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#F8F5F0' },
+  root: { flex: 1, backgroundColor: Colors.background },
   container: { flex: 1 },
-  content: { paddingHorizontal: 20, paddingBottom: 20 },
-  heading: { fontSize: 22, fontWeight: '700', color: '#1B4332', marginTop: 8 },
-  subheading: { fontSize: 14, color: '#5C6B6A', marginBottom: 16 },
+  content: { paddingHorizontal: Spacing.lg, paddingBottom: 20 },
+  heading: { ...Typography.heading, marginTop: Spacing.sm },
+  subheading: { ...Typography.subheading, marginBottom: Spacing.lg },
 
-  // KPI Cards
   kpiRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 16,
-    gap: 8,
+    marginBottom: Spacing.lg,
+    gap: Spacing.sm,
   },
   kpiCard: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.card,
     borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 4,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.xs,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
+    ...Shadows.card,
     borderWidth: 1,
-    borderColor: '#E5E0D8',
+    borderColor: Colors.border,
   },
-  kpiValue: {
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  kpiLabel: {
-    fontSize: 10,
-    color: '#A8A098',
-    marginTop: 2,
-    letterSpacing: 0.5,
-  },
+  kpiValue: { fontSize: 18, fontWeight: '700' },
+  kpiLabel: { ...Typography.small, letterSpacing: 0.5, marginTop: 2 },
 
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1B4332',
-    marginTop: 16,
-    marginBottom: 8,
-  },
+  sectionTitle: { ...Typography.subheading, marginTop: Spacing.lg, marginBottom: Spacing.sm },
 
-  chartTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1B4332',
-    marginTop: 16,
-    marginBottom: 8,
-  },
+  chartTitle: { ...Typography.body, fontWeight: '600', marginTop: Spacing.lg, marginBottom: Spacing.sm },
   chartCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.card,
     borderRadius: 12,
-    padding: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
-    marginBottom: 12,
+    padding: Spacing.xs,
+    ...Shadows.card,
+    marginBottom: Spacing.md,
     minHeight: CHART_HEIGHT,
     overflow: 'hidden',
   },
 
-  // Risk Card
   riskCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.card,
     borderRadius: 12,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
-    marginBottom: 12,
+    padding: Spacing.lg,
+    ...Shadows.card,
+    marginBottom: Spacing.md,
   },
   pieContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    marginBottom: 12,
+    marginBottom: Spacing.md,
   },
-  legendContainer: {
-    justifyContent: 'center',
-    gap: 6,
-  },
-  legendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  legendColor: {
-    width: 16,
-    height: 16,
-    borderRadius: 4,
-  },
-  legendText: {
-    fontSize: 14,
-    color: '#1B4332',
-    fontWeight: '500',
-    width: 70,
-  },
-  legendPercent: {
-    fontSize: 14,
-    color: '#5C6B6A',
-    fontWeight: '600',
-  },
+  legendContainer: { justifyContent: 'center', gap: 6 },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  legendColor: { width: 16, height: 16, borderRadius: 4 },
+  legendText: { ...Typography.body, fontWeight: '500', width: 70 },
+  legendPercent: { ...Typography.body, fontWeight: '600', color: Colors.textSecondary },
+
   barRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 6,
   },
-  barLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#1B4332',
-    width: 70,
-  },
-  barPercent: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#5C6B6A',
-    width: 40,
-    textAlign: 'right',
-  },
+  barLabel: { ...Typography.body, fontWeight: '600', width: 70 },
+  barPercent: { ...Typography.body, fontWeight: '600', color: Colors.textSecondary, width: 40, textAlign: 'right' },
 
-  emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 40,
-    marginTop: 40,
-  },
-  emptyEmoji: { fontSize: 64, marginBottom: 16 },
-  emptyTitle: { color: '#1B4332', fontSize: 20, fontWeight: '700', marginBottom: 8 },
-  emptyText: { color: '#5C6B6A', fontSize: 14, textAlign: 'center', lineHeight: 22 },
+  emptyState: { alignItems: 'center', justifyContent: 'center', padding: 40, marginTop: 40 },
+  emptyEmoji: { fontSize: 64, marginBottom: Spacing.lg },
+  emptyTitle: { ...Typography.heading, marginBottom: Spacing.sm },
+  emptyText: { ...Typography.body, color: Colors.textSecondary, textAlign: 'center', lineHeight: 22 },
 });

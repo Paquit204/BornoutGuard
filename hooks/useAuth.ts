@@ -1,4 +1,5 @@
- import { Session, User } from '@supabase/supabase-js';
+ // hooks/useAuth.ts
+import { Session, User } from '@supabase/supabase-js';
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Profile } from '../types/database';
@@ -33,6 +34,7 @@ export function useAuth() {
   }, []);
 
   const fetchProfile = async (userId: string) => {
+     
     const { data } = await supabase
       .from('profiles')
       .select('*')

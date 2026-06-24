@@ -1,18 +1,19 @@
- import { useRouter } from 'expo-router';
+ // app/welcome.tsx
+import { useRouter } from 'expo-router';
 import React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Colors, Shadows, Spacing, Typography } from '../constants/theme';
 
 export default function WelcomeScreen() {
   const router = useRouter();
 
   const handleGetStarted = () => {
-    router.replace('/dashboard');
+    router.replace('/login');   // ✅ go to Login screen
   };
 
   return (
     <View style={styles.container}>
       <View style={styles.content}>
-        {/* Logo */}
         <View style={styles.iconBox}>
           <Image
             source={require('../assets/images/BornoutGuard.png')}
@@ -36,11 +37,11 @@ export default function WelcomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F5F0',
+    backgroundColor: Colors.background,
   },
   content: {
     flex: 1,
-    paddingHorizontal: 24,
+    paddingHorizontal: Spacing.xl,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -48,46 +49,41 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 28,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.card,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
-    padding: 16,
+    marginBottom: Spacing.xl,
+    ...Shadows.card,
+    padding: Spacing.lg,
   },
   logo: {
     width: 90,
     height: 90,
   },
   title: {
+    ...Typography.heading,
     fontSize: 34,
-    fontWeight: '800',
-    color: '#1B4332',
     textAlign: 'center',
     letterSpacing: 0.5,
     marginBottom: 4,
   },
   subtitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2D6A4F',
+    ...Typography.subheading,
+    color: Colors.primary,
     textAlign: 'center',
     letterSpacing: 1,
     marginBottom: 32,
   },
   button: {
-    backgroundColor: '#2D6A4F',
+    backgroundColor: Colors.primary,
     borderRadius: 12,
-    paddingVertical: 16,
+    paddingVertical: Spacing.lg,
     paddingHorizontal: 48,
     alignItems: 'center',
+    ...Shadows.button,
   },
   buttonText: {
-    color: '#FFFFFF',
+    color: '#fff',
     fontSize: 18,
     fontWeight: '600',
     letterSpacing: 0.5,

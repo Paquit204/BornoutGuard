@@ -1,5 +1,7 @@
- import React from 'react';
+ // components/Footer.tsx
+import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { Colors, Typography } from '../constants/theme';
 
 export default function Footer() {
   const now = new Date();
@@ -21,37 +23,37 @@ export default function Footer() {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#F8F5F0',
+    backgroundColor: Colors.background,
     paddingVertical: 8,
     paddingHorizontal: 20,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     borderTopWidth: 1,
-    borderTopColor: '#E5E0D8',
+    borderTopColor: Colors.border,
   },
   langToggle: {
     flexDirection: 'row',
-    backgroundColor: '#E5E0D8',
+    backgroundColor: Colors.border,
     borderRadius: 12,
     paddingHorizontal: 4,
     paddingVertical: 2,
   },
   lang: {
-    fontSize: 11,
+    ...Typography.small,
     fontWeight: '600',
-    color: '#5C6B6A',
+    color: Colors.textSecondary,
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
   langActive: {
     color: '#FFFFFF',
-    backgroundColor: '#2D6A4F',
+    backgroundColor: Colors.primary,
     borderRadius: 10,
   },
   timestamp: {
-    fontSize: 12,
-    color: '#5C6B6A',
+    ...Typography.small,
+    color: Colors.textSecondary,
     fontWeight: '500',
   },
 });

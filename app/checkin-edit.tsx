@@ -11,13 +11,13 @@ import {
 } from 'react-native';
 import CustomButton from '../components/CustomButton';
 import TopBar from '../components/TopBar';
+import { Colors, Shadows, Spacing, Typography } from '../constants/theme';
 import { supabase } from '../lib/supabase';
 import { calculateBurnout } from '../services/burnoutCalculator';
 
 const MOODS = ['😄', '😊', '😐', '😔', '😩'];
 const MOOD_LABELS = ['Happy', 'Neutral', 'Sad', 'Stressed', 'Anxious'];
 
-// ✅ Working Stepper (same as checkin.tsx)
 function Stepper({
   value,
   min,
@@ -60,8 +60,8 @@ function Stepper({
 }
 
 const stepperStyles = StyleSheet.create({
-  container: { gap: 4 },
-  label: { fontSize: 14, fontWeight: '500', color: '#1B4332' },
+  container: { gap: Spacing.xs },
+  label: { ...Typography.body, fontWeight: '500' },
   controls: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -71,19 +71,19 @@ const stepperStyles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#E5E0D8',
+    backgroundColor: Colors.border,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  btnText: { fontSize: 22, fontWeight: '300', color: '#1B4332' },
-  value: { fontSize: 22, fontWeight: '700', color: '#1B4332' },
-  unit: { fontSize: 14, fontWeight: '400', color: '#5C6B6A' },
+  btnText: { fontSize: 22, fontWeight: '300', color: Colors.textPrimary },
+  value: { fontSize: 22, fontWeight: '700', color: Colors.textPrimary },
+  unit: { fontSize: 14, fontWeight: '400', color: Colors.textSecondary },
 });
 
 export default function CheckinEditScreen() {
   const params = useLocalSearchParams();
   const router = useRouter();
-  const loaded = useRef(false); // ✅ prevent re-loading
+  const loaded = useRef(false);
 
   const [studyHours, setStudyHours] = useState(4);
   const [sleepHours, setSleepHours] = useState(7);
@@ -92,7 +92,6 @@ export default function CheckinEditScreen() {
   const [selectedMood, setSelectedMood] = useState(0);
   const [loading, setLoading] = useState(false);
 
-  // ✅ Load data only once when the screen opens
   useEffect(() => {
     if (loaded.current) return;
     if (params.checkin) {
@@ -109,12 +108,11 @@ export default function CheckinEditScreen() {
         console.log('Error parsing checkin data', e);
       }
     }
-  }, []); // ✅ runs only once (empty dependency array)
+  }, []);
 
-  // Live preview
   const preview = calculateBurnout(stressLevel, sleepHours, studyHours, assignments);
   const previewColor =
-    preview.risk_level === 'Low' ? '#2D6A4F' : preview.risk_level === 'Moderate' ? '#E8A838' : '#D9534F';
+    preview.risk_level === 'Low' ? Colors.success : preview.risk_level === 'Moderate' ? Colors.warning : Colors.danger;
 
   const handleSave = async () => {
     if (!params.checkin) return;
@@ -147,7 +145,7 @@ export default function CheckinEditScreen() {
 
   return (
     <View style={styles.root}>
-      <TopBar showBack={true} />
+      <TopBar showBack />
       <ScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingBottom: 90 }]}>
         <Text style={styles.heading}>Edit Check-in</Text>
         <Text style={styles.subheading}>Update your daily wellness data.</Text>
@@ -164,9 +162,9 @@ export default function CheckinEditScreen() {
           step={1}
           value={stressLevel}
           onValueChange={setStressLevel}
-          minimumTrackTintColor="#2D6A4F"
-          maximumTrackTintColor="#E5E0D8"
-          thumbTintColor="#2D6A4F"
+          minimumTrackTintColor={Colors.primary}
+          maximumTrackTintColor={Colors.border}
+          thumbTintColor={Colors.primary}
         />
         <View style={styles.sliderEnds}>
           <Text style={styles.sliderEnd}>CALM</Text>
@@ -207,43 +205,39 @@ export default function CheckinEditScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#F8F5F0' },
+  root: { flex: 1, backgroundColor: Colors.background },
   container: { flex: 1 },
-  content: { padding: 20, paddingBottom: 40 },
-  heading: { fontSize: 24, fontWeight: '700', color: '#1B4332', marginTop: 8 },
-  subheading: { fontSize: 14, color: '#5C6B6A', marginTop: 4, marginBottom: 20 },
-  sliderLabel: { fontSize: 14, fontWeight: '500', color: '#1B4332', marginBottom: 4 },
+  content: { padding: Spacing.xl, paddingBottom: 40 },
+  heading: { ...Typography.heading, marginTop: Spacing.sm },
+  subheading: { ...Typography.subheading, marginTop: Spacing.xs, marginBottom: Spacing.xl },
+  sliderLabel: { ...Typography.body, fontWeight: '500', marginBottom: Spacing.xs },
   slider: { width: '100%', height: 40 },
   sliderEnds: { flexDirection: 'row', justifyContent: 'space-between' },
-  sliderEnd: { fontSize: 12, color: '#5C6B6A' },
-  moodRow: { flexDirection: 'row', justifyContent: 'space-between', marginVertical: 12 },
+  sliderEnd: { ...Typography.small },
+  moodRow: { flexDirection: 'row', justifyContent: 'space-between', marginVertical: Spacing.md },
   moodBtn: {
     alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 4,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.xs,
     borderRadius: 10,
-    backgroundColor: '#E5E0D8',
+    backgroundColor: Colors.border,
     minWidth: 52,
   },
-  moodBtnSelected: { backgroundColor: '#2D6A4F' },
+  moodBtnSelected: { backgroundColor: Colors.primary },
   moodEmoji: { fontSize: 24 },
-  moodLabel: { fontSize: 10, color: '#5C6B6A', marginTop: 2 },
-  moodLabelSelected: { color: '#FFFFFF', fontWeight: '600' },
+  moodLabel: { ...Typography.small, marginTop: 2 },
+  moodLabelSelected: { color: '#fff', fontWeight: '600' },
   previewCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.card,
     borderRadius: 16,
-    padding: 16,
+    padding: Spacing.lg,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
-    marginBottom: 16,
+    ...Shadows.card,
+    marginBottom: Spacing.md,
   },
-  previewLabel: { fontSize: 12, fontWeight: '600', color: '#5C6B6A', letterSpacing: 0.5 },
-  previewRow: { flexDirection: 'row', alignItems: 'baseline', marginTop: 4 },
+  previewLabel: { ...Typography.small, fontWeight: '600', color: Colors.textSecondary, letterSpacing: 0.5 },
+  previewRow: { flexDirection: 'row', alignItems: 'baseline', marginTop: Spacing.xs },
   previewScore: { fontSize: 40, fontWeight: '800' },
-  previewMax: { fontSize: 14, color: '#A8A098', marginLeft: 4 },
-  previewRisk: { fontSize: 14, fontWeight: '600', marginTop: 2 },
+  previewMax: { ...Typography.small, marginLeft: Spacing.xs },
+  previewRisk: { ...Typography.body, fontWeight: '600', marginTop: Spacing.xs },
 });

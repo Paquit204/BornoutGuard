@@ -1,21 +1,28 @@
- import { useRouter } from 'expo-router';
+ // components/TopBar.tsx
+import { Feather } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { BorderRadius, Colors, Shadows, Spacing, Typography } from '../constants/theme';
+import { useAuth } from '../hooks/useAuth';
 
 interface TopBarProps {
   showBack?: boolean;
-  profile?: {
-    name: string;
-  };
+  profile?: { name: string };
   showProfile?: boolean;
+  onSearchPress?: () => void;
+  onNotificationPress?: () => void;
 }
 
-export default function TopBar({ showBack = false, profile, showProfile = false }: TopBarProps) {
+export default function TopBar({
+  showBack = false,
+  profile,
+  showProfile = false,
+  onSearchPress,
+  onNotificationPress,
+}: TopBarProps) {
   const router = useRouter();
-  const now = new Date();
-  const dateStr = now
-    .toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
-    .toUpperCase();
+  const { profile: userProfile } = useAuth();
 
   const getInitials = (name: string) => {
     if (!name) return '?';
@@ -28,66 +35,124 @@ export default function TopBar({ showBack = false, profile, showProfile = false 
     router.push('/profile');
   };
 
+  const avatarUrl = userProfile?.avatar_url;
+
   return (
     <View style={styles.container}>
-      <View style={styles.left}>
-        {showBack && (
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Text style={styles.backText}>←</Text>
-          </TouchableOpacity>
-        )}
-        <Text style={styles.date}>{dateStr}</Text>
-      </View>
+      <View style={styles.inner}>
+        <View style={styles.left}>
+          {showBack && (
+            <TouchableOpacity
+              onPress={() => router.back()}
+              style={styles.iconButton}
+              activeOpacity={0.7}
+            >
+              <Feather name="chevron-left" size={22} color={Colors.textPrimary} />
+            </TouchableOpacity>
+          )}
+          {showProfile && profile && (
+            <TouchableOpacity style={styles.profileButton} onPress={handleProfilePress}>
+              {avatarUrl ? (
+                <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
+              ) : (
+                <View style={styles.avatarContainer}>
+                  <Text style={styles.avatarText}>{getInitials(profile.name)}</Text>
+                </View>
+              )}
+              <Text style={styles.nameText} numberOfLines={1}>
+                {profile.name}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
 
-      {showProfile && profile && (
-        <TouchableOpacity style={styles.right} onPress={handleProfilePress}>
-          <Text style={styles.nameText} numberOfLines={1}>
-            {profile.name}
-          </Text>
-          <View style={styles.avatarContainer}>
-            <Text style={styles.avatarText}>{getInitials(profile.name)}</Text>
-          </View>
-        </TouchableOpacity>
-      )}
+        <View style={styles.right}>
+          <TouchableOpacity
+            style={styles.iconButton}
+            onPress={onSearchPress || (() => {})}
+            activeOpacity={0.7}
+          >
+            <Feather name="search" size={22} color={Colors.textPrimary} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.iconButton}
+            onPress={onNotificationPress || (() => {})}
+            activeOpacity={0.7}
+          >
+            <Feather name="bell" size={22} color={Colors.textPrimary} />
+          </TouchableOpacity>
+        </View>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    backgroundColor: Colors.background,
+    paddingTop: 56,        // ✅ restored – proper status bar spacing
+    paddingBottom: 12,     // slightly more padding below
+    paddingHorizontal: Spacing.xl,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.cardBorder,
+    ...Shadows.card,
+  },
+  inner: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 56,
-    paddingBottom: 12,
-    backgroundColor: '#F8F5F0',
+    height: 52,
   },
-  left: { flexDirection: 'row', alignItems: 'center' },
-  backBtn: { marginRight: 10 },
-  backText: { fontSize: 20, color: '#2D6A4F' },
-  date: { fontSize: 14, fontWeight: '600', color: '#1B4332', letterSpacing: 0.5 },
+  left: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
   right: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: Spacing.sm,
+  },
+  iconButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.card,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    ...Shadows.card,
+  },
+  profileButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  nameText: {
+    ...Typography.body,
+    color: Colors.textPrimary,
+    maxWidth: 100,
+    fontWeight: '600',
   },
   avatarContainer: {
     width: 36,
     height: 36,
-    borderRadius: 18,
-    backgroundColor: '#2D6A4F',
+    borderRadius: BorderRadius.pill,
+    backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  avatarText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '700',
+  avatarImage: {
+    width: 36,
+    height: 36,
+    borderRadius: BorderRadius.pill,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
   },
-  nameText: {
+  avatarText: {
+    color: Colors.white,
+    fontWeight: 'bold',
     fontSize: 14,
-    fontWeight: '600',
-    color: '#1B4332',
   },
 });

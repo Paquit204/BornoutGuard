@@ -1,15 +1,17 @@
- import { Feather } from '@expo/vector-icons';
+ // components/BottomNav.tsx
+import { Feather } from '@expo/vector-icons';
 import { usePathname, useRouter } from 'expo-router';
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BorderRadius, Colors, Shadows, Spacing } from '../constants/theme';
 
 type FeatherIconName = keyof typeof Feather.glyphMap;
 
 const tabs: { name: string; path: string; icon: FeatherIconName }[] = [
   { name: 'Home', path: '/dashboard', icon: 'home' },
   { name: 'Check-in', path: '/checkin', icon: 'clipboard' },
-  { name: 'Trends', path: '/analytics', icon: 'bar-chart-2' },
+  { name: 'Analytics', path: '/analytics', icon: 'bar-chart-2' },
   { name: 'Profile', path: '/profile', icon: 'user' },
 ];
 
@@ -18,10 +20,10 @@ export default function BottomNav() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  if (pathname === '/login' || pathname === '/signup') return null;
+  if (['/login', '/signup', '/forgot-password', '/welcome', '/index', '/signout'].includes(pathname)) return null;
 
   return (
-    <View style={[styles.container, { paddingBottom: insets.bottom || 12 }]}>
+    <View style={[styles.container, { paddingBottom: insets.bottom || 8 }]}>
       <View style={styles.bar}>
         {tabs.map((tab) => {
           const isActive = pathname === tab.path;
@@ -36,8 +38,9 @@ export default function BottomNav() {
                 <Feather
                   name={tab.icon}
                   size={22}
-                  color="#A8A098" // always gray – no color change
+                  color={isActive ? Colors.primary : Colors.textMuted}
                 />
+                {isActive && <View style={styles.activeDot} />}
               </View>
             </TouchableOpacity>
           );
@@ -54,25 +57,21 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: Spacing.lg,
     paddingTop: 0,
     backgroundColor: 'transparent',
   },
   bar: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 30,
-    paddingVertical: 4,
-    paddingHorizontal: 4,
+    backgroundColor: Colors.card,
+    borderRadius: BorderRadius.pill,
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.xs,
     width: '100%',
     maxWidth: 500,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 10,
     borderWidth: 1,
-    borderColor: '#F0EDE8',
+    borderColor: Colors.cardBorder,
+    ...Shadows.card,
   },
   tab: {
     flex: 1,
@@ -86,8 +85,17 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
+    position: 'relative',
   },
   activeIconWrapper: {
-    backgroundColor: '#E8F5E9', // light green circle – only background changes
+    backgroundColor: 'rgba(159,232,112,0.12)',
+  },
+  activeDot: {
+    position: 'absolute',
+    bottom: 2,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Colors.primary,
   },
 });

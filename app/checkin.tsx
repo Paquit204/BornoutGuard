@@ -1,4 +1,5 @@
- import Slider from '@react-native-community/slider';
+ // app/checkin.tsx
+import Slider from '@react-native-community/slider';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
@@ -20,6 +21,7 @@ import BottomNav from '../components/BottomNav';
 import CustomButton from '../components/CustomButton';
 import LoadingSpinner from '../components/LoadingSpinner';
 import TopBar from '../components/TopBar';
+import { BorderRadius, Colors, Shadows, Spacing, Typography } from '../constants/theme';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { calculateBurnout } from '../services/burnoutCalculator';
@@ -69,8 +71,8 @@ function Stepper({
 }
 
 const stepperStyles = StyleSheet.create({
-  container: { gap: 4 },
-  label: { fontSize: 14, fontWeight: '500', color: '#1B4332' },
+  container: { gap: Spacing.xs },
+  label: { ...Typography.body, fontWeight: '500' },
   controls: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -80,13 +82,13 @@ const stepperStyles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#E5E0D8',
+    backgroundColor: Colors.border,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  btnText: { fontSize: 22, fontWeight: '300', color: '#1B4332' },
-  value: { fontSize: 22, fontWeight: '700', color: '#1B4332' },
-  unit: { fontSize: 14, fontWeight: '400', color: '#5C6B6A' },
+  btnText: { fontSize: 22, fontWeight: '300', color: Colors.textPrimary },
+  value: { fontSize: 22, fontWeight: '700', color: Colors.textPrimary },
+  unit: { fontSize: 14, fontWeight: '400', color: Colors.textSecondary },
 });
 
 export default function CheckinScreen() {
@@ -101,7 +103,6 @@ export default function CheckinScreen() {
   const [selectedMood, setSelectedMood] = useState(0);
   const [loading, setLoading] = useState(false);
 
-  // ✅ Animated FAB – pulse effect
   const scale = useSharedValue(1);
 
   useEffect(() => {
@@ -119,20 +120,11 @@ export default function CheckinScreen() {
     transform: [{ scale: scale.value }],
   }));
 
-  // Read pre‑filled params from "Add" button
   useEffect(() => {
-    if (params.studyHours) {
-      setStudyHours(parseFloat(params.studyHours as string));
-    }
-    if (params.sleepHours) {
-      setSleepHours(parseFloat(params.sleepHours as string));
-    }
-    if (params.assignments) {
-      setAssignments(parseInt(params.assignments as string));
-    }
-    if (params.stressLevel) {
-      setStressLevel(parseInt(params.stressLevel as string));
-    }
+    if (params.studyHours) setStudyHours(parseFloat(params.studyHours as string));
+    if (params.sleepHours) setSleepHours(parseFloat(params.sleepHours as string));
+    if (params.assignments) setAssignments(parseInt(params.assignments as string));
+    if (params.stressLevel) setStressLevel(parseInt(params.stressLevel as string));
     if (params.mood) {
       const moodIndex = MOOD_LABELS.indexOf(params.mood as string);
       if (moodIndex !== -1) setSelectedMood(moodIndex);
@@ -168,7 +160,7 @@ export default function CheckinScreen() {
 
   const preview = calculateBurnout(stressLevel, sleepHours, studyHours, assignments);
   const previewColor =
-    preview.risk_level === 'Low' ? '#2D6A4F' : preview.risk_level === 'Moderate' ? '#E8A838' : '#D9534F';
+    preview.risk_level === 'Low' ? Colors.success : preview.risk_level === 'Moderate' ? Colors.warning : Colors.danger;
 
   if (loading) return <LoadingSpinner message="Saving..." />;
 
@@ -177,78 +169,83 @@ export default function CheckinScreen() {
   return (
     <View style={styles.root}>
       <TopBar
-        showProfile={true}
-        profile={{
-          name: displayName,
-        }}
+        key={profile?.avatar_url || 'no-avatar'}
+        showProfile
+        profile={{ name: displayName }}
+        onSearchPress={() => console.log('🔍 Search')}
+        onNotificationPress={() => console.log('🔔 Notifications')}
       />
       <ScrollView
-        style={styles.container}
-        contentContainerStyle={[styles.content, { paddingBottom: 100 }]}
+        contentContainerStyle={[styles.content, { paddingBottom: 140 }]} // ✅ extra bottom gap
+        showsVerticalScrollIndicator={false}
       >
         <Text style={styles.heading}>DAILY CHECK-IN</Text>
         <Text style={styles.subheading}>How was today?</Text>
         <Text style={styles.description}>Five quick fields. Honest answers make the score useful.</Text>
 
-        <View style={styles.field}>
-          <Stepper
-            label="Study hours"
-            value={studyHours}
-            min={0}
-            max={16}
-            step={0.5}
-            unit="h"
-            onChange={setStudyHours}
-          />
-          <Text style={styles.hint}>Healthy ≤ 6h</Text>
-        </View>
+        {/* ✅ Wrapped fields in a card with shadow + lime glow */}
+        <View style={styles.card}>
+          <View style={styles.field}>
+            <Stepper
+              label="Study hours"
+              value={studyHours}
+              min={0}
+              max={16}
+              step={0.5}
+              unit="h"
+              onChange={setStudyHours}
+            />
+            <Text style={styles.hint}>Healthy ≤ 6h</Text>
+          </View>
 
-        <View style={styles.field}>
-          <Stepper
-            label="Sleep hours"
-            value={sleepHours}
-            min={0}
-            max={12}
-            step={0.5}
-            unit="h"
-            onChange={setSleepHours}
-          />
-          <Text style={styles.hint}>Optimal 7-9h</Text>
-        </View>
+          <View style={styles.field}>
+            <Stepper
+              label="Sleep hours"
+              value={sleepHours}
+              min={0}
+              max={12}
+              step={0.5}
+              unit="h"
+              onChange={setSleepHours}
+            />
+            <Text style={styles.hint}>Optimal 7-9h</Text>
+          </View>
 
-        <View style={styles.field}>
-          <Stepper
-            label="Open assignments"
-            value={assignments}
-            min={0}
-            max={20}
-            step={1}
-            unit=""
-            onChange={setAssignments}
-          />
-          <Text style={styles.hint}>Light ≤ 2</Text>
-        </View>
+          <View style={styles.field}>
+            <Stepper
+              label="Open assignments"
+              value={assignments}
+              min={0}
+              max={20}
+              step={1}
+              unit=""
+              onChange={setAssignments}
+            />
+            <Text style={styles.hint}>Light ≤ 2</Text>
+          </View>
 
-        <View style={styles.field}>
-          <Text style={styles.sliderLabel}>Stress level</Text>
-          <Slider
-            style={styles.slider}
-            minimumValue={1}
-            maximumValue={10}
-            step={1}
-            value={stressLevel}
-            onValueChange={setStressLevel}
-            minimumTrackTintColor="#2D6A4F"
-            maximumTrackTintColor="#E5E0D8"
-            thumbTintColor="#2D6A4F"
-          />
-          <View style={styles.sliderEnds}>
-            <Text style={styles.sliderEnd}>CALM</Text>
-            <Text style={styles.sliderEnd}>OVERWHELMED</Text>
+          <View style={styles.field}>
+            <Text style={styles.sliderLabel}>Stress level</Text>
+            <Slider
+              style={styles.slider}
+              minimumValue={1}
+              maximumValue={10}
+              step={1}
+              value={stressLevel}
+              onValueChange={setStressLevel}
+              minimumTrackTintColor={Colors.primary}
+              maximumTrackTintColor={Colors.border}
+              thumbTintColor={Colors.primary}
+            />
+            <View style={styles.sliderEnds}>
+              <Text style={styles.sliderEnd}>CALM</Text>
+              <Text style={styles.sliderEnd}>OVERWHELMED</Text>
+            </View>
           </View>
         </View>
 
-        <View style={styles.field}>
+        {/* Mood selection – also in a card */}
+        <View style={styles.card}>
           <Text style={styles.sliderLabel}>Mood</Text>
           <View style={styles.moodRow}>
             {MOODS.map((emoji, i) => (
@@ -266,6 +263,7 @@ export default function CheckinScreen() {
           </View>
         </View>
 
+        {/* Preview Card */}
         <View style={styles.previewCard}>
           <Text style={styles.previewLabel}>LIVE PREVIEW</Text>
           <View style={styles.previewRow}>
@@ -285,7 +283,6 @@ export default function CheckinScreen() {
         />
       </ScrollView>
 
-      {/* ✅ Floating Action Button with pulse animation */}
       <Animated.View style={[styles.fabWrapper, fabAnimatedStyle]}>
         <TouchableOpacity
           style={styles.fab}
@@ -302,50 +299,63 @@ export default function CheckinScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#F8F5F0' },
-  container: { flex: 1 },
-  content: { paddingHorizontal: 20, paddingBottom: 20 },
-  heading: { fontSize: 24, fontWeight: '700', color: '#1B4332', marginTop: 8 },
-  subheading: { fontSize: 16, fontWeight: '600', color: '#2D6A4F', marginTop: 4 },
-  description: { fontSize: 14, color: '#5C6B6A', marginTop: 2, marginBottom: 16 },
-  field: { marginBottom: 20 },
-  hint: { fontSize: 12, color: '#A8A098', marginTop: 2, textAlign: 'right' },
-  sliderLabel: { fontSize: 14, fontWeight: '500', color: '#1B4332', marginBottom: 4 },
+  root: { flex: 1, backgroundColor: Colors.background },
+  content: {
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.sm,
+  },
+  heading: { ...Typography.heading, marginTop: Spacing.sm },
+  subheading: { ...Typography.subheading, color: Colors.primary, marginTop: Spacing.xs },
+  description: { ...Typography.body, color: Colors.textSecondary, marginTop: 2, marginBottom: Spacing.lg },
+
+  // ✅ Card with dark shadow + lime glow
+  card: {
+    backgroundColor: Colors.card,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.lg,
+    marginBottom: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.limeGlow,
+    ...Shadows.card,
+  },
+
+  field: { marginBottom: Spacing.md },
+  hint: { ...Typography.small, textAlign: 'right', marginTop: 2 },
+  sliderLabel: { ...Typography.body, fontWeight: '500', marginBottom: Spacing.xs },
   slider: { width: '100%', height: 40 },
   sliderEnds: { flexDirection: 'row', justifyContent: 'space-between' },
-  sliderEnd: { fontSize: 12, color: '#5C6B6A' },
-  moodRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 },
+  sliderEnd: { ...Typography.small },
+
+  moodRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: Spacing.sm },
   moodBtn: {
     alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 4,
-    borderRadius: 10,
-    backgroundColor: '#E5E0D8',
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.xs,
+    borderRadius: BorderRadius.md,
+    backgroundColor: Colors.border,
     minWidth: 52,
   },
-  moodBtnSelected: { backgroundColor: '#2D6A4F' },
+  moodBtnSelected: { backgroundColor: Colors.primary },
   moodEmoji: { fontSize: 24 },
-  moodLabel: { fontSize: 10, color: '#5C6B6A', marginTop: 2 },
-  moodLabelSelected: { color: '#FFFFFF', fontWeight: '600' },
-  previewCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
-    marginBottom: 16,
-  },
-  previewLabel: { fontSize: 12, fontWeight: '600', color: '#5C6B6A', letterSpacing: 0.5 },
-  previewRow: { flexDirection: 'row', alignItems: 'baseline', marginTop: 4 },
-  previewScore: { fontSize: 40, fontWeight: '800' },
-  previewMax: { fontSize: 14, color: '#A8A098', marginLeft: 4 },
-  previewRisk: { fontSize: 14, fontWeight: '600', marginTop: 2 },
+  moodLabel: { ...Typography.small, marginTop: 2 },
+  moodLabelSelected: { color: '#fff', fontWeight: '600' },
 
-  // Floating Action Button
+  previewCard: {
+    backgroundColor: Colors.card,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.lg,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.limeGlow,
+    ...Shadows.card,
+    marginBottom: Spacing.md,
+  },
+  previewLabel: { ...Typography.small, fontWeight: '600', color: Colors.textSecondary, letterSpacing: 0.5 },
+  previewRow: { flexDirection: 'row', alignItems: 'baseline', marginTop: Spacing.xs },
+  previewScore: { fontSize: 40, fontWeight: '800' },
+  previewMax: { ...Typography.small, marginLeft: Spacing.xs },
+  previewRisk: { ...Typography.body, fontWeight: '600', marginTop: Spacing.xs },
+
   fabWrapper: {
     position: 'absolute',
     bottom: 80,
@@ -361,7 +371,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#2D6A4F',
+    backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
@@ -370,8 +380,5 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 8,
   },
-  fabIcon: {
-    fontSize: 28,
-    color: '#FFFFFF',
-  },
+  fabIcon: { fontSize: 28, color: '#fff' },
 });

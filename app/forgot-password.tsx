@@ -1,18 +1,19 @@
  import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import CustomButton from '../components/CustomButton';
 import TopBar from '../components/TopBar';
+import { Colors, Spacing, Typography } from '../constants/theme';
 import { supabase } from '../lib/supabase';
 
 export default function ForgotPasswordScreen() {
@@ -46,7 +47,7 @@ export default function ForgotPasswordScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <TopBar showBack={true} />
+      <TopBar showBack />
       <ScrollView
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
@@ -54,7 +55,7 @@ export default function ForgotPasswordScreen() {
         <View style={styles.header}>
           <Text style={styles.title}>Reset Password</Text>
           <Text style={styles.subtitle}>
-            Enter your email address and we’ll send you a link to reset your password.
+            Enter your email address and we'll send you a link to reset your password.
           </Text>
         </View>
 
@@ -64,7 +65,7 @@ export default function ForgotPasswordScreen() {
             <TextInput
               style={styles.input}
               placeholder="you@university.edu"
-              placeholderTextColor="#A8A098"
+              placeholderTextColor={Colors.textMuted}
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
@@ -89,24 +90,24 @@ export default function ForgotPasswordScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8F5F0' },
-  scroll: { flexGrow: 1, justifyContent: 'center', padding: 24 },
+  container: { flex: 1, backgroundColor: Colors.background },
+  scroll: { flexGrow: 1, justifyContent: 'center', padding: Spacing.xl },
   header: { alignItems: 'center', marginBottom: 40 },
-  title: { fontSize: 28, fontWeight: '700', color: '#1B4332', marginBottom: 8 },
-  subtitle: { fontSize: 14, color: '#5C6B6A', textAlign: 'center' },
-  form: { gap: 16 },
+  title: { ...Typography.heading, fontSize: 28, marginBottom: Spacing.sm },
+  subtitle: { ...Typography.body, color: Colors.textSecondary, textAlign: 'center' },
+  form: { gap: Spacing.lg },
   inputGroup: { gap: 6 },
-  label: { color: '#1B4332', fontSize: 13, fontWeight: '500' },
+  label: { ...Typography.body, fontWeight: '500' },
   input: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.card,
     borderRadius: 12,
-    padding: 14,
-    color: '#1B4332',
+    padding: Spacing.md,
+    color: Colors.textPrimary,
     fontSize: 15,
     borderWidth: 1,
-    borderColor: '#E5E0D8',
+    borderColor: Colors.border,
   },
-  button: { marginTop: 8 },
-  backLink: { alignSelf: 'center', marginTop: 16 },
-  backText: { color: '#2D6A4F', fontSize: 14, fontWeight: '600' },
+  button: { marginTop: Spacing.sm },
+  backLink: { alignSelf: 'center', marginTop: Spacing.lg },
+  backText: { color: Colors.primary, fontSize: 14, fontWeight: '600' },
 });
