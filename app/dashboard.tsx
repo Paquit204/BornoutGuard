@@ -1,6 +1,9 @@
- import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+ // app/dashboard.tsx
+import { Feather } from '@expo/vector-icons';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
+  Dimensions,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -8,273 +11,421 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import {
-  useAnimatedStyle,
-  useSharedValue,
-  withDelay,
-  withTiming,
-} from 'react-native-reanimated';
+import Svg, {
+  Circle,
+  Defs,
+  Stop,
+  LinearGradient as SvgGradient,
+  Line as SvgLine,
+  Text as SvgText,
+} from 'react-native-svg';
 import BottomNav from '../components/BottomNav';
 import LoadingSpinner from '../components/LoadingSpinner';
 import TopBar from '../components/TopBar';
+import { BorderRadius, Colors, Shadows, Spacing, Typography } from '../constants/theme';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
+import { calculateBurnout } from '../services/burnoutCalculator';
 import { DailyCheckin } from '../types/database';
 
-const RISK_COLORS = {
-  Low: '#2D6A4F',
-  Moderate: '#E8A838',
-  High: '#D9534F',
+const { width: screenWidth } = Dimensions.get('window');
+
+const getDayName = (date: Date) => {
+  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  return days[date.getDay() === 0 ? 6 : date.getDay() - 1];
 };
 
 export default function DashboardScreen() {
-  const { profile, loading: authLoading } = useAuth();
-  const [latestCheckin, setLatestCheckin] = useState<DailyCheckin | null>(null);
-  const [weeklySummary, setWeeklySummary] = useState({ count: 0, avgScore: 0 });
-  const [weeklyAverages, setWeeklyAverages] = useState({ sleep: 0, study: 0, stress: 0 });
+  const { user, profile, refreshProfile } = useAuth();
+  const router = useRouter();
+  
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const router = useRouter();
+  const [weeklyHistory, setWeeklyHistory] = useState<DailyCheckin[]>([]);
+  const [currentCheckin, setCurrentCheckin] = useState<DailyCheckin | null>(null);
+  const [recommendations, setRecommendations] = useState<string[]>([]);
 
-  const scoreOpacity = useSharedValue(0);
-  const cardSlide = useSharedValue(40);
-
-  const scoreStyle = useAnimatedStyle(() => ({
-    opacity: scoreOpacity.value,
-    transform: [{ translateY: cardSlide.value }],
-  }));
+  useFocusEffect(
+    useCallback(() => {
+      refreshProfile();
+    }, [refreshProfile])
+  );
 
   const fetchData = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      await supabase.auth.signOut();
+    if (!user) return;
+    try {
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+      sevenDaysAgo.setHours(0, 0, 0, 0);
+
+      const { data: history } = await supabase
+        .from('daily_checkins')
+        .select('*')
+        .eq('user_id', user.id)
+        .gte('created_at', sevenDaysAgo.toISOString())
+        .order('created_at', { ascending: true });
+
+      if (history && history.length > 0) {
+        setWeeklyHistory(history);
+        const todayStr = new Date().toDateString();
+        const latest = history[history.length - 1];
+        if (new Date(latest.created_at).toDateString() === todayStr) {
+          setCurrentCheckin(latest);
+          const result = calculateBurnout(
+            latest.stress_level,
+            latest.sleep_hours,
+            latest.study_hours,
+            latest.assignments
+          );
+          setRecommendations(result.recommendations.slice(0, 3));
+        } else {
+          setCurrentCheckin(null);
+          setRecommendations([]);
+        }
+      } else {
+        setWeeklyHistory([]);
+        setCurrentCheckin(null);
+        setRecommendations([]);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
       setLoading(false);
-      router.replace('/login');
-      return;
+      setRefreshing(false);
     }
-
-    const { data: latest } = await supabase
-      .from('daily_checkins')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single();
-
-    if (latest) setLatestCheckin(latest);
-
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    const { data: weekly } = await supabase
-      .from('daily_checkins')
-      .select('burnout_score, sleep_hours, study_hours, stress_level')
-      .eq('user_id', user.id)
-      .gte('created_at', sevenDaysAgo.toISOString());
-
-    if (weekly && weekly.length > 0) {
-      const avgScore = weekly.reduce((s, c) => s + c.burnout_score, 0) / weekly.length;
-      setWeeklySummary({ count: weekly.length, avgScore: Math.round(avgScore) });
-
-      const avgSleep = weekly.reduce((s, c) => s + c.sleep_hours, 0) / weekly.length;
-      const avgStudy = weekly.reduce((s, c) => s + c.study_hours, 0) / weekly.length;
-      const avgStress = weekly.reduce((s, c) => s + c.stress_level, 0) / weekly.length;
-      setWeeklyAverages({
-        sleep: Math.round(avgSleep * 10) / 10,
-        study: Math.round(avgStudy * 10) / 10,
-        stress: Math.round(avgStress * 10) / 10,
-      });
-    }
-
-    setLoading(false);
-    scoreOpacity.value = withDelay(100, withTiming(1, { duration: 600 }));
-    cardSlide.value = withDelay(100, withTiming(0, { duration: 600 }));
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
-  const onRefresh = async () => {
+  const onRefresh = useCallback(() => {
     setRefreshing(true);
-    await fetchData();
-    setRefreshing(false);
-  };
+    fetchData();
+  }, [fetchData]);
 
-  if (loading || authLoading) return <LoadingSpinner message="Loading dashboard..." />;
+  if (loading) return <LoadingSpinner message="Loading your metrics..." />;
 
-  const riskColor = latestCheckin
-    ? RISK_COLORS[latestCheckin.risk_level]
-    : '#A8A098';
+  const displayName = profile?.full_name || profile?.email?.split('@')[0] || 'User';
 
-  const displayName = profile?.full_name || profile?.email?.split('@')[0] || 'Student';
+  const chartWidth = screenWidth - 68;
+  const chartHeight = 140;
+  const paddingLeft = 30;
+  const paddingRight = 10;
+  const paddingTop = 20;
+  const paddingBottom = 25;
+
+  const points: { x: number; y: number; val: number; label: string }[] = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date();
+    d.setDate(d.getDate() - 6 + i);
+    const dStr = d.toDateString();
+    const match = weeklyHistory.find((h) => new Date(h.created_at).toDateString() === dStr);
+    const score = match ? match.stress_level : 0;
+    const x = paddingLeft + ((chartWidth - paddingLeft - paddingRight) / 6) * i;
+    const y = paddingTop + (chartHeight - paddingTop - paddingBottom) * (1 - (score > 0 ? score : 0) / 10);
+    points.push({ x, y, val: score, label: getDayName(d) });
+  }
 
   return (
-    <View style={styles.root}>
+    <View style={styles.rootContainer}>
       <TopBar
-        showProfile={true}
-        profile={{
-          name: displayName,
-        }}
+        key={profile?.avatar_url || 'no-avatar'}
+        showProfile
+        profile={{ name: displayName }}
+        onSearchPress={() => console.log('🔍 Search')}
+        onNotificationPress={() => console.log('🔔 Notifications')}
       />
+      
       <ScrollView
-        style={styles.container}
-        contentContainerStyle={[styles.content, { paddingBottom: 90 }]} // 👈 added padding
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#2D6A4F" />
-        }
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
+        showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.greeting}>Hello there.</Text>
-        <Text style={styles.greetingSub}>Two-minute check-in, then we’ll show you where you stand.</Text>
+        {/* Hero Header */}
+        <View style={styles.welcomeContainer}>
+          <Text style={styles.greetingHeader}>Wellness Tracker</Text>
+          <Text style={styles.greetingSub}>Your daily wellbeing assistant</Text>
+        </View>
 
-        <View style={styles.scoreCard}>
-          <Text style={styles.cardLabel}>MOST RECENT SCORE</Text>
-          <View style={styles.scoreRow}>
-            <Text style={[styles.scoreValue, { color: riskColor }]}>
-              {latestCheckin ? Math.round(latestCheckin.burnout_score) : '--'}
+        {/* Metric Cards */}
+        <View style={styles.metricsGrid}>
+          <View style={[styles.metricCard, styles.metricCardLight]}>
+            <View style={[styles.iconContainer, { backgroundColor: Colors.primary + '20' }]}>
+              <Feather name="activity" size={18} color={Colors.primary} />
+            </View>
+            <Text style={styles.metricLabel}>Stress Level</Text>
+            <Text style={styles.metricValue}>
+              {currentCheckin ? `${currentCheckin.stress_level}/10` : 'N/A'}
             </Text>
-            <Text style={styles.scoreMax}>/ 100</Text>
           </View>
-          <View style={styles.riskBadge}>
-            <View style={[styles.riskDot, { backgroundColor: riskColor }]} />
-            <Text style={[styles.riskText, { color: riskColor }]}>
-              {latestCheckin ? `${latestCheckin.risk_level} risk` : 'No data'}
+
+          <View style={[styles.metricCard, styles.metricCardBlack]}>
+            <View style={[styles.iconContainer, { backgroundColor: 'rgba(159,232,112,0.15)' }]}>
+              <Feather name="moon" size={18} color={Colors.primary} />
+            </View>
+            <Text style={styles.metricLabelBlack}>Sleep Hours</Text>
+            <Text style={styles.metricValueBlack}>
+              {currentCheckin ? `${currentCheckin.sleep_hours}h` : 'N/A'}
             </Text>
-            {latestCheckin && (
-              <Text style={styles.riskSub}>· Healthy balance maintained.</Text>
-            )}
-          </View>
-          <View style={styles.progressBg}>
-            <View
-              style={[
-                styles.progressFill,
-                {
-                  width: latestCheckin ? `${Math.min(latestCheckin.burnout_score, 100)}%` : '0%',
-                  backgroundColor: riskColor,
-                },
-              ]}
-            />
-          </View>
-          <View style={styles.progressLabels}>
-            <Text style={styles.progressLabel}>0 - LOW</Text>
-            <Text style={styles.progressLabel}>33</Text>
-            <Text style={styles.progressLabel}>66</Text>
-            <Text style={styles.progressLabel}>100 - HIGH</Text>
           </View>
         </View>
 
-        <View style={styles.weeklyCard}>
-          <Text style={styles.weeklyTitle}>THIS WEEK, ON AVERAGE</Text>
-          <View style={styles.weeklyRow}>
-            <View style={styles.weeklyItem}>
-              <Text style={styles.weeklyValue}>{weeklyAverages.sleep}h</Text>
-              <Text style={styles.weeklyLabel}>SLEEP</Text>
-            </View>
-            <View style={styles.weeklyItem}>
-              <Text style={styles.weeklyValue}>{weeklyAverages.study}h</Text>
-              <Text style={styles.weeklyLabel}>STUDY</Text>
-            </View>
-            <View style={styles.weeklyItem}>
-              <Text style={styles.weeklyValue}>{weeklyAverages.stress}/10</Text>
-              <Text style={styles.weeklyLabel}>STRESS</Text>
-            </View>
-          </View>
-        </View>
-
-        <View style={styles.motivationCard}>
-          <Text style={styles.motivationTitle}>FOR YOU, RIGHT NOW</Text>
-          <Text style={styles.motivationHeading}>KEEP GOING</Text>
-          <Text style={styles.motivationText}>
-            You're in a good rhythm{'\n'}
-            Protect what's working: same sleep window, same study blocks, same boundaries.
-          </Text>
-        </View>
-
-        <TouchableOpacity style={styles.startButton} onPress={() => router.push('/checkin')}>
-          <Text style={styles.startButtonText}>START</Text>
-          <Text style={styles.startButtonSub}>Today's check-in</Text>
+        <TouchableOpacity
+          style={styles.primaryButton}
+          onPress={() => router.push('/checkin')}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.primaryButtonText}>Daily Check-in</Text>
+          <Text style={styles.primaryButtonSub}>How are you feeling today?</Text>
         </TouchableOpacity>
+
+        {/* Stress Trend Chart */}
+        <View style={styles.cardLight}>
+          <Text style={styles.cardTitleLight}>Stress Trend</Text>
+          <View style={styles.chartWrapper}>
+            <Svg width={chartWidth} height={chartHeight}>
+              <Defs>
+                <SvgGradient id="limeGrad" x1="0" y1="0" x2="0" y2="1">
+                  <Stop offset="0%" stopColor={Colors.primary} stopOpacity={0.2} />
+                  <Stop offset="100%" stopColor={Colors.primary} stopOpacity={0.0} />
+                </SvgGradient>
+              </Defs>
+              
+              {[2, 5, 8].map((level) => {
+                const yPos = paddingTop + (chartHeight - paddingTop - paddingBottom) * (1 - level / 10);
+                return (
+                  <SvgLine
+                    key={level}
+                    x1={paddingLeft}
+                    y1={yPos}
+                    x2={chartWidth - paddingRight}
+                    y2={yPos}
+                    stroke={Colors.border}
+                    strokeWidth={1}
+                    strokeDasharray="4,4"
+                  />
+                );
+              })}
+
+              {points.map((p, idx) => {
+                if (idx === 0) return null;
+                const prev = points[idx - 1];
+                if (prev.val === 0 || p.val === 0) return null;
+                return (
+                  <SvgLine
+                    key={idx}
+                    x1={prev.x}
+                    y1={prev.y}
+                    x2={p.x}
+                    y2={p.y}
+                    stroke={Colors.primary}
+                    strokeWidth={2.5}
+                  />
+                );
+              })}
+
+              {points.map((p, idx) => (
+                <React.Fragment key={idx}>
+                  {p.val > 0 && (
+                    <Circle cx={p.x} cy={p.y} r={4} fill={Colors.primary} />
+                  )}
+                  <SvgText
+                    x={p.x}
+                    y={chartHeight - 5}
+                    fontSize="10"
+                    fill={Colors.textSecondary}
+                    fontWeight="600"
+                    textAnchor="middle"
+                  >
+                    {p.label}
+                  </SvgText>
+                </React.Fragment>
+              ))}
+            </Svg>
+          </View>
+        </View>
+
+        {/* Recommendations Card */}
+        <View style={styles.cardLight}>
+          <View style={styles.recommendationHeader}>
+            <Text style={styles.cardTitleLight}>Recommendations</Text>
+            <Feather name="info" size={18} color={Colors.primary} />
+          </View>
+          {currentCheckin ? (
+            recommendations.length > 0 ? (
+              recommendations.map((rec, index) => (
+                <View key={index} style={styles.recommendationItem}>
+                  <View style={[styles.recommendationDot, { backgroundColor: Colors.primary }]} />
+                  <Text style={styles.recommendationText}>{rec}</Text>
+                </View>
+              ))
+            ) : (
+              <Text style={styles.recommendationText}>No recommendations available.</Text>
+            )
+          ) : (
+            <Text style={styles.recommendationText}>
+              Complete a check‑in to get personalised recommendations.
+            </Text>
+          )}
+          {currentCheckin && (
+            <TouchableOpacity
+              style={styles.seeAllLink}
+              onPress={() => router.push('/analytics')}
+            >
+              <Text style={styles.seeAllLinkText}>View all insights →</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        <View style={{ height: 100 }} />
       </ScrollView>
+
       <BottomNav />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#F8F5F0' },
-  container: { flex: 1 },
-  content: { paddingHorizontal: 20, paddingBottom: 20 },
-  greeting: { fontSize: 18, fontWeight: '600', color: '#1B4332', marginBottom: 4 },
-  greetingSub: { fontSize: 14, color: '#5C6B6A', marginBottom: 16 },
-  scoreCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
-    marginBottom: 16,
+  rootContainer: {
+    flex: 1,
+    backgroundColor: Colors.background,
   },
-  cardLabel: { fontSize: 12, fontWeight: '600', color: '#5C6B6A', letterSpacing: 0.5 },
-  scoreRow: { flexDirection: 'row', alignItems: 'baseline', marginTop: 4 },
-  scoreValue: { fontSize: 48, fontWeight: '800' },
-  scoreMax: { fontSize: 16, color: '#A8A098', marginLeft: 4 },
-  riskBadge: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
-  riskDot: { width: 8, height: 8, borderRadius: 4, marginRight: 6 },
-  riskText: { fontSize: 14, fontWeight: '600' },
-  riskSub: { fontSize: 14, color: '#5C6B6A', marginLeft: 4 },
-  progressBg: {
-    height: 6,
-    backgroundColor: '#E5E0D8',
-    borderRadius: 3,
-    marginTop: 16,
-    overflow: 'hidden',
+  scrollContent: {
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.sm,
+    paddingBottom: 20,
   },
-  progressFill: { height: '100%', borderRadius: 3 },
-  progressLabels: {
+  welcomeContainer: {
+    marginBottom: Spacing.lg,
+  },
+  greetingHeader: {
+    ...Typography.heading,
+    fontSize: 26,
+  },
+  greetingSub: {
+    ...Typography.subheading,
+    marginTop: 2,
+  },
+  metricsGrid: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+    marginBottom: Spacing.md,
+  },
+  metricCard: {
+    flex: 1,
+    padding: Spacing.md,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    borderColor: Colors.limeGlow,     // ✅ lime glow border
+    ...Shadows.card,                 // ✅ dark shadow
+  },
+  metricCardLight: {
+    backgroundColor: Colors.card,
+  },
+  metricCardBlack: {
+    backgroundColor: Colors.black,
+    borderColor: Colors.limeGlow,     // ✅ lime glow on dark card
+  },
+  iconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: BorderRadius.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Spacing.sm,
+  },
+  metricLabel: {
+    ...Typography.small,
+    color: Colors.textSecondary,
+    fontWeight: '500',
+  },
+  metricValue: {
+    ...Typography.heading,
+    fontSize: 22,
+    color: Colors.textPrimary,
+    marginTop: 2,
+  },
+  metricLabelBlack: {
+    ...Typography.small,
+    color: Colors.primary,
+    fontWeight: '500',
+  },
+  metricValueBlack: {
+    ...Typography.heading,
+    fontSize: 22,
+    color: Colors.primary,
+    marginTop: 2,
+  },
+  primaryButton: {
+    backgroundColor: Colors.primary,
+    borderRadius: BorderRadius.lg,
+    paddingVertical: Spacing.lg,
+    paddingHorizontal: Spacing.xl,
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+    ...Shadows.button,
+  },
+  primaryButtonText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: Colors.white,
+  },
+  primaryButtonSub: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.8)',
+    marginTop: 2,
+  },
+  cardLight: {
+    backgroundColor: Colors.card,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.lg,
+    marginBottom: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.limeGlow,     // ✅ lime glow border
+    ...Shadows.card,                 // ✅ dark shadow
+  },
+  cardTitleLight: {
+    ...Typography.bodyBold,
+    fontSize: 15,
+    marginBottom: Spacing.md,
+    color: Colors.textPrimary,
+  },
+  chartWrapper: {
+    alignItems: 'center',
+    marginTop: Spacing.xs,
+  },
+  recommendationHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 4,
-  },
-  progressLabel: { fontSize: 10, color: '#A8A098' },
-  weeklyCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
-    marginBottom: 16,
-  },
-  weeklyTitle: { fontSize: 12, fontWeight: '600', color: '#5C6B6A', letterSpacing: 0.5 },
-  weeklyRow: { flexDirection: 'row', justifyContent: 'space-around', marginTop: 8 },
-  weeklyItem: { alignItems: 'center' },
-  weeklyValue: { fontSize: 20, fontWeight: '700', color: '#1B4332' },
-  weeklyLabel: { fontSize: 12, color: '#5C6B6A', marginTop: 2 },
-  motivationCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
-    marginBottom: 16,
-  },
-  motivationTitle: { fontSize: 12, fontWeight: '600', color: '#5C6B6A', letterSpacing: 0.5 },
-  motivationHeading: { fontSize: 22, fontWeight: '700', color: '#1B4332', marginTop: 4 },
-  motivationText: { fontSize: 14, color: '#4A5A58', marginTop: 4, lineHeight: 20 },
-  startButton: {
-    backgroundColor: '#2D6A4F',
-    borderRadius: 12,
-    paddingVertical: 14,
     alignItems: 'center',
-    marginTop: 4,
+    marginBottom: Spacing.md,
   },
-  startButtonText: { fontSize: 16, fontWeight: '700', color: '#FFFFFF', letterSpacing: 0.5 },
-  startButtonSub: { fontSize: 12, color: '#D4E2D0', marginTop: 2 },
+  recommendationItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: Spacing.sm,
+  },
+  recommendationDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: Spacing.md,
+    marginTop: 6,
+  },
+  recommendationText: {
+    ...Typography.body,
+    color: Colors.textSecondary,
+    flex: 1,
+    lineHeight: 22,
+  },
+  seeAllLink: {
+    marginTop: Spacing.sm,
+    alignSelf: 'flex-end',
+  },
+  seeAllLinkText: {
+    ...Typography.body,
+    color: Colors.primary,
+    fontWeight: '600',
+  },
 });

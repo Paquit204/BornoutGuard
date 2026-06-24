@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import BottomNav from '../components/BottomNav';
 import TopBar from '../components/TopBar';
+import { Colors, Shadows, Spacing, Typography } from '../constants/theme';
 import { supabase } from '../lib/supabase';
 import { DailyCheckin } from '../types/database';
 
@@ -45,7 +46,6 @@ export default function CheckinListScreen() {
     setLoading(false);
   };
 
-  // ✅ "Add" button – duplicates the card's data into a new check-in
   const handleAdd = (item: DailyCheckin) => {
     router.push({
       pathname: '/checkin',
@@ -94,7 +94,7 @@ export default function CheckinListScreen() {
   const renderItem = ({ item }: { item: DailyCheckin }) => {
     const date = new Date(item.created_at).toLocaleDateString();
     const riskColor =
-      item.risk_level === 'Low' ? '#10B981' : item.risk_level === 'Moderate' ? '#F59E0B' : '#EF4444';
+      item.risk_level === 'Low' ? Colors.success : item.risk_level === 'Moderate' ? Colors.warning : Colors.danger;
 
     return (
       <View style={styles.card}>
@@ -104,21 +104,18 @@ export default function CheckinListScreen() {
         </View>
         <View style={styles.cardDetails}>
           <Text style={styles.detail}>📚 {item.study_hours}h</Text>
-          <Text style={styles.detail}>😴 {item.sleep_hours}h</Text>
-          <Text style={styles.detail}>📋 {item.assignments}</Text>
-          <Text style={styles.detail}>😰 {item.stress_level}/10</Text>
-          <Text style={styles.detail}>😊 {item.mood}</Text>
+          <Text style={styles.detail}>🛌 {item.sleep_hours}h</Text>
+          <Text style={styles.detail}>📝 {item.assignments}</Text>
+          <Text style={styles.detail}>⚡ {item.stress_level}/10</Text>
+          <Text style={styles.detail}>🎭 {item.mood}</Text>
         </View>
         <View style={styles.cardActions}>
-          {/* ✅ Add button first (green) */}
           <TouchableOpacity style={[styles.actionBtn, styles.addBtn]} onPress={() => handleAdd(item)}>
             <Text style={styles.actionText}>Add</Text>
           </TouchableOpacity>
-          {/* Edit button (blue) */}
           <TouchableOpacity style={[styles.actionBtn, styles.editBtn]} onPress={() => handleEdit(item)}>
             <Text style={styles.actionText}>Edit</Text>
           </TouchableOpacity>
-          {/* Delete button (red) */}
           <TouchableOpacity style={[styles.actionBtn, styles.deleteBtn]} onPress={() => handleDelete(item.id)}>
             <Text style={styles.actionText}>Delete</Text>
           </TouchableOpacity>
@@ -130,14 +127,14 @@ export default function CheckinListScreen() {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#2D6A4F" />
+        <ActivityIndicator size="large" color={Colors.primary} />
       </View>
     );
   }
 
   return (
     <View style={styles.root}>
-      <TopBar showBack={true} />
+      <TopBar showBack />
       <View style={styles.container}>
         <Text style={styles.heading}>Manage Check-ins</Text>
         {checkins.length === 0 ? (
@@ -157,54 +154,55 @@ export default function CheckinListScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#F8F5F0' },
-  container: { flex: 1, padding: 20 },
-  heading: { fontSize: 24, fontWeight: '700', color: '#1B4332', marginTop: 8, marginBottom: 16 },
+  root: { flex: 1, backgroundColor: Colors.background },
+  container: { flex: 1, padding: Spacing.xl },
+  heading: { ...Typography.heading, marginTop: Spacing.sm, marginBottom: Spacing.lg },
   list: { paddingBottom: 20 },
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.card,
     borderRadius: 12,
-    padding: 16,
+    padding: Spacing.lg,
     borderWidth: 1,
-    borderColor: '#E5E0D8',
-    marginBottom: 12,
+    borderColor: Colors.border,
+    marginBottom: Spacing.md,
+    ...Shadows.card,
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: Spacing.sm,
   },
-  cardDate: { fontSize: 14, fontWeight: '600', color: '#1B4332' },
-  cardRisk: { fontSize: 14, fontWeight: '600' },
+  cardDate: { ...Typography.body, fontWeight: '600' },
+  cardRisk: { ...Typography.body, fontWeight: '600' },
   cardDetails: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 12,
+    gap: Spacing.sm,
+    marginBottom: Spacing.md,
   },
   detail: {
-    fontSize: 13,
-    color: '#5C6B6A',
-    backgroundColor: '#F3F4F6',
-    paddingHorizontal: 8,
+    ...Typography.small,
+    color: Colors.textSecondary,
+    backgroundColor: Colors.border,
+    paddingHorizontal: Spacing.sm,
     paddingVertical: 2,
     borderRadius: 4,
   },
   cardActions: {
     flexDirection: 'row',
     justifyContent: 'flex-start',
-    gap: 8,
+    gap: Spacing.sm,
   },
   actionBtn: {
     paddingVertical: 6,
     paddingHorizontal: 14,
     borderRadius: 8,
   },
-  addBtn: { backgroundColor: '#2D6A4F' },    // green
-  editBtn: { backgroundColor: '#2563EB' },    // blue
-  deleteBtn: { backgroundColor: '#D9534F' },  // red
+  addBtn: { backgroundColor: Colors.primary },
+  editBtn: { backgroundColor: '#2563EB' },
+  deleteBtn: { backgroundColor: Colors.danger },
   actionText: {
-    color: '#FFFFFF',
+    color: '#fff',
     fontSize: 13,
     fontWeight: '500',
   },
@@ -212,11 +210,11 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F8F5F0',
+    backgroundColor: Colors.background,
   },
   noData: {
     textAlign: 'center',
-    color: '#5C6B6A',
     marginTop: 40,
+    ...Typography.body,
   },
 });

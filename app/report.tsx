@@ -1,18 +1,20 @@
- import * as FileSystem from 'expo-file-system';
+ // app/report.tsx
+import * as FileSystem from 'expo-file-system';
 import { useRouter } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import BottomNav from '../components/BottomNav';
 import TopBar from '../components/TopBar';
+import { Colors, Shadows, Spacing, Typography } from '../constants/theme';
 import { supabase } from '../lib/supabase';
 import { DailyCheckin } from '../types/database';
 
@@ -84,14 +86,14 @@ export default function ReportScreen() {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#2D6A4F" />
+        <ActivityIndicator size="large" color={Colors.primary} />
       </View>
     );
   }
 
   return (
     <View style={styles.root}>
-      <TopBar showBack={true} />
+      <TopBar showBack />
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
         <Text style={styles.heading}>Export Report</Text>
         <Text style={styles.subheading}>
@@ -114,7 +116,7 @@ export default function ReportScreen() {
         </View>
 
         <TouchableOpacity
-          style={styles.exportButton}
+          style={[styles.exportButton, (exporting || checkins.length === 0) && styles.disabledButton]}
           onPress={generateCSV}
           disabled={exporting || checkins.length === 0}
         >
@@ -133,49 +135,48 @@ export default function ReportScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#F8F5F0' },
+  root: { flex: 1, backgroundColor: Colors.background },
   container: { flex: 1 },
-  content: { padding: 20, paddingBottom: 40 },
-  heading: { fontSize: 24, fontWeight: '700', color: '#1B4332', marginTop: 8 },
-  subheading: { fontSize: 14, color: '#5C6B6A', marginTop: 4, marginBottom: 20 },
+  content: { padding: Spacing.xl, paddingBottom: 40 },
+  heading: { ...Typography.heading, marginTop: Spacing.sm },
+  subheading: { ...Typography.subheading, marginTop: Spacing.xs, marginBottom: Spacing.xl },
   statsCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.card,
     borderRadius: 12,
-    padding: 16,
+    padding: Spacing.lg,
     borderWidth: 1,
-    borderColor: '#E5E0D8',
-    marginBottom: 20,
+    borderColor: Colors.border,
+    ...Shadows.card,
+    marginBottom: Spacing.xl,
   },
   statRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 8,
+    paddingVertical: Spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E0D8',
+    borderBottomColor: Colors.border,
   },
-  statLabel: { fontSize: 14, color: '#1B4332', fontWeight: '500' },
-  statValue: { fontSize: 14, color: '#5C6B6A' },
+  statLabel: { ...Typography.body, fontWeight: '500' },
+  statValue: { ...Typography.body, color: Colors.textSecondary },
   exportButton: {
-    backgroundColor: '#2D6A4F',
+    backgroundColor: Colors.primary,
     borderRadius: 12,
-    paddingVertical: 16,
+    paddingVertical: Spacing.lg,
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: Spacing.sm,
   },
-  exportButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
+  disabledButton: { opacity: 0.6 },
+  exportButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
   centered: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F8F5F0',
+    backgroundColor: Colors.background,
   },
   noData: {
     textAlign: 'center',
-    color: '#D9534F',
-    marginTop: 16,
+    color: Colors.danger,
+    marginTop: Spacing.lg,
+    ...Typography.body,
   },
 });

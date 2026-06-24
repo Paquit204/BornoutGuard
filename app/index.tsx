@@ -6,6 +6,7 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
+import { Colors, Shadows, Spacing, Typography } from '../constants/theme';
 
 export default function SplashScreen() {
   const opacity = useSharedValue(0);
@@ -32,9 +33,7 @@ export default function SplashScreen() {
     <View style={styles.container}>
       <Animated.View style={[styles.content, animatedStyle]}>
         <View style={styles.iconContainer}>
-          {/* Fallback emoji (always visible) */}
           <Text style={styles.fallbackIcon}>🧠</Text>
-          {/* Your custom logo – shows on top of emoji when loaded */}
           <Image
             source={require('../assets/images/BornoutGuard.png')}
             style={styles.logo}
@@ -52,7 +51,7 @@ export default function SplashScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F5F0',
+    backgroundColor: Colors.background,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -61,38 +60,32 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 24,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.card,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 4,
-    position: 'relative', // needed for absolute positioning of emoji
+    marginBottom: Spacing.xl,
+    ...Shadows.card,
+    position: 'relative',
     overflow: 'hidden',
-    padding: 12,
+    padding: Spacing.md,
   },
   fallbackIcon: {
     fontSize: 60,
     position: 'absolute',
-    color: '#2D6A4F',
+    color: Colors.primary,
   },
   logo: {
     width: 80,
     height: 80,
-    zIndex: 1, // image stays on top of emoji
+    zIndex: 1,
   },
   title: {
+    ...Typography.heading,
     fontSize: 32,
-    fontWeight: '700',
-    color: '#1B4332',
-    marginBottom: 8,
+    marginBottom: Spacing.sm,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#5C6B6A',
+    ...Typography.subheading,
     letterSpacing: 1,
   },
 });

@@ -1,5 +1,7 @@
+ // components/RecommendationCard.tsx
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { Colors, Typography } from '../constants/theme';
 import GlassCard from './GlassCard';
 
 interface Props {
@@ -8,7 +10,7 @@ interface Props {
 }
 
 export default function RecommendationCard({ recommendation, index }: Props) {
-  const colors = ['#3B82F6', '#10B981', '#F59E0B'];
+  const colors = [Colors.primary, Colors.secondary, '#3B82F6'];
   const color = colors[index % colors.length];
 
   return (
@@ -34,8 +36,8 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   text: {
-    color: '#D1D5DB',
-    fontSize: 14,
+    ...Typography.body,
+    color: Colors.textPrimary,
     flex: 1,
     lineHeight: 20,
   },

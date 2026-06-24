@@ -1,6 +1,8 @@
+ // app/signout.tsx
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { Colors, Spacing, Typography } from '../constants/theme';
 import { useAuth } from '../hooks/useAuth';
 
 export default function SignOutScreen() {
@@ -13,13 +15,11 @@ export default function SignOutScreen() {
       try {
         await signOut();
         setStatus('Signed out successfully');
-        // Redirect to login after a short delay
         setTimeout(() => {
           router.replace('/login');
         }, 500);
       } catch (error: any) {
         setStatus('Error signing out. Please try again.');
-        // Still navigate after a delay
         setTimeout(() => {
           router.replace('/login');
         }, 2000);
@@ -31,7 +31,7 @@ export default function SignOutScreen() {
 
   return (
     <View style={styles.container}>
-      <ActivityIndicator size="large" color="#2D6A4F" />
+      <ActivityIndicator size="large" color={Colors.primary} />
       <Text style={styles.text}>{status}</Text>
     </View>
   );
@@ -42,11 +42,11 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F8F5F0',
+    backgroundColor: Colors.background,
   },
   text: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#5C6B6A',
+    marginTop: Spacing.lg,
+    ...Typography.body,
+    color: Colors.textSecondary,
   },
 });

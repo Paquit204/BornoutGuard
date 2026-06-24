@@ -1,10 +1,13 @@
- import { useRouter } from 'expo-router';
+ // app/settings.tsx
+import { useRouter } from 'expo-router';
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import TopBar from '../components/TopBar';
+import { BorderRadius, Colors, Shadows, Spacing, Typography } from '../constants/theme';
 import { supabase } from '../lib/supabase';
 
 export default function SettingsScreen() {
   const router = useRouter();
+  
 
   const handleClearData = () => {
     Alert.alert(
@@ -29,10 +32,11 @@ export default function SettingsScreen() {
 
   return (
     <View style={styles.root}>
-      <TopBar showBack={true} />
+      <TopBar showBack />
       <ScrollView
         style={styles.container}
-        contentContainerStyle={[styles.content, { paddingBottom: 90 }]}
+        contentContainerStyle={[styles.content, { paddingBottom: 100 }]}
+        showsVerticalScrollIndicator={false}
       >
         <Text style={styles.heading}>Settings</Text>
 
@@ -42,7 +46,7 @@ export default function SettingsScreen() {
           <Text style={styles.menuArrow}>›</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/edit-profile')}>
+        <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/editprofile')}>
           <Text style={styles.menuIcon}>✏️</Text>
           <Text style={styles.menuText}>Edit Profile</Text>
           <Text style={styles.menuArrow}>›</Text>
@@ -65,45 +69,27 @@ export default function SettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#F8F5F0' },
+  root: { flex: 1, backgroundColor: Colors.background },
   container: { flex: 1 },
-  content: { paddingHorizontal: 20, paddingBottom: 20 },
-  heading: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#1B4332',
-    marginTop: 8,
-    marginBottom: 20,
-  },
+  content: { paddingHorizontal: Spacing.xl, paddingBottom: 20 },
+  heading: { ...Typography.heading, marginTop: Spacing.sm, marginBottom: Spacing.xl },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    padding: 16,
-    borderRadius: 12,
+    backgroundColor: Colors.card,
+    padding: Spacing.lg,
+    borderRadius: BorderRadius.lg,
     borderWidth: 1,
-    borderColor: '#E5E0D8',
-    marginBottom: 10,
+    borderColor: Colors.limeGlow,     // ✅ lime glow border
+    marginBottom: Spacing.sm,
+    ...Shadows.card,                 // ✅ dark shadow
   },
-  menuIcon: {
-    fontSize: 22,
-    marginRight: 14,
-  },
-  menuText: {
-    flex: 1,
-    fontSize: 16,
-    color: '#1B4332',
-    fontWeight: '500',
-  },
-  menuArrow: {
-    fontSize: 18,
-    color: '#A8A098',
-  },
+  menuIcon: { fontSize: 22, marginRight: Spacing.md },
+  menuText: { flex: 1, ...Typography.body, fontWeight: '500' },
+  menuArrow: { fontSize: 18, color: Colors.textMuted },
   signOutItem: {
-    marginTop: 10,
-    borderColor: '#FEE2E2',
+    marginTop: Spacing.sm,
+    borderColor: Colors.danger,       // red border for sign-out
   },
-  signOutText: {
-    color: '#D9534F',
-  },
+  signOutText: { color: Colors.danger },
 });

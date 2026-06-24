@@ -1,18 +1,27 @@
- import { useRouter } from 'expo-router';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+ // app/profile.tsx
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback } from 'react';
+import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import BottomNav from '../components/BottomNav';
 import TopBar from '../components/TopBar';
+import { Colors, Shadows, Spacing, Typography } from '../constants/theme';
 import { useAuth } from '../hooks/useAuth';
 
 export default function ProfileScreen() {
-  const { profile } = useAuth();
+  const { profile, refreshProfile } = useAuth();
   const router = useRouter();
+
+  useFocusEffect(
+    useCallback(() => {
+      refreshProfile();
+    }, [refreshProfile])
+  );
 
   const displayName = profile?.full_name || profile?.email?.split('@')[0] || 'Student';
 
   return (
     <View style={styles.root}>
-      <TopBar showBack={true} />
+      <TopBar showBack />
 
       <ScrollView
         style={styles.container}
@@ -20,11 +29,15 @@ export default function ProfileScreen() {
       >
         {/* User Info */}
         <View style={styles.userSection}>
-          <View style={styles.avatarLarge}>
-            <Text style={styles.avatarText}>
-              {displayName.charAt(0).toUpperCase()}
-            </Text>
-          </View>
+          {profile?.avatar_url ? (
+            <Image source={{ uri: profile.avatar_url }} style={styles.avatarLarge} />
+          ) : (
+            <View style={styles.avatarLargePlaceholder}>
+              <Text style={styles.avatarText}>
+                {displayName.charAt(0).toUpperCase()}
+              </Text>
+            </View>
+          )}
           <Text style={styles.userName}>{displayName}</Text>
           <Text style={styles.userEmail}>{profile?.email}</Text>
         </View>
@@ -52,27 +65,25 @@ export default function ProfileScreen() {
           <Text style={styles.navArrow}>›</Text>
         </TouchableOpacity>
 
-        {/* ⚠️ "Manage Historical Check-ins" card REMOVED – now accessible via FAB on Check-in screen */}
-
         {/* Risk Levels Section */}
         <Text style={styles.sectionTitle}>Risk Assessment Guide</Text>
         <View style={styles.riskCard}>
           <View style={styles.riskItem}>
-            <View style={[styles.riskDot, { backgroundColor: '#2D6A4F' }]} />
+            <View style={[styles.riskDot, { backgroundColor: Colors.success }]} />
             <View>
               <Text style={styles.riskTitle}>Low 0-33</Text>
               <Text style={styles.riskDesc}>Healthy balance maintained.</Text>
             </View>
           </View>
           <View style={styles.riskItem}>
-            <View style={[styles.riskDot, { backgroundColor: '#E8A838' }]} />
+            <View style={[styles.riskDot, { backgroundColor: Colors.warning }]} />
             <View>
               <Text style={styles.riskTitle}>Moderate 34-66</Text>
               <Text style={styles.riskDesc}>Watch for warning signs.</Text>
             </View>
           </View>
           <View style={styles.riskItem}>
-            <View style={[styles.riskDot, { backgroundColor: '#D9534F' }]} />
+            <View style={[styles.riskDot, { backgroundColor: Colors.danger }]} />
             <View>
               <Text style={styles.riskTitle}>High 67-100</Text>
               <Text style={styles.riskDesc}>Immediate action recommended.</Text>
@@ -87,53 +98,58 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#F8F5F0' },
+  root: { flex: 1, backgroundColor: Colors.background },
   container: { flex: 1 },
-  content: { paddingHorizontal: 20, paddingBottom: 20 },
+  content: { paddingHorizontal: Spacing.xl, paddingBottom: 20 },
 
   userSection: {
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.card,
     borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
+    padding: Spacing.xl,
+    marginBottom: Spacing.lg,
     borderWidth: 1,
-    borderColor: '#E5E0D8',
+    borderColor: Colors.border,
+    ...Shadows.card,
   },
   avatarLarge: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#2D6A4F',
+  },
+  avatarLargePlaceholder: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarText: {
-    color: '#FFFFFF',
+    color: '#fff',
     fontSize: 32,
     fontWeight: '700',
   },
   userName: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#1B4332',
-    marginTop: 12,
+    ...Typography.heading,
+    marginTop: Spacing.md,
   },
   userEmail: {
-    fontSize: 14,
-    color: '#5C6B6A',
+    ...Typography.body,
+    color: Colors.textSecondary,
     marginTop: 2,
   },
 
   navCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.card,
     borderRadius: 12,
-    padding: 14,
-    marginBottom: 10,
+    padding: Spacing.md,
+    marginBottom: Spacing.sm,
     borderWidth: 1,
-    borderColor: '#E5E0D8',
+    borderColor: Colors.border,
+    ...Shadows.card,
   },
   navIconWrapper: {
     width: 44,
@@ -141,42 +157,22 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 14,
+    marginRight: Spacing.md,
   },
-  navIcon: {
-    fontSize: 22,
-  },
-  navContent: {
-    flex: 1,
-  },
-  navTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#1B4332',
-  },
-  navDesc: {
-    fontSize: 12,
-    color: '#5C6B6A',
-    marginTop: 2,
-  },
-  navArrow: {
-    fontSize: 20,
-    color: '#A8A098',
-  },
+  navIcon: { fontSize: 22 },
+  navContent: { flex: 1 },
+  navTitle: { ...Typography.body, fontWeight: '600' },
+  navDesc: { ...Typography.small, marginTop: 2 },
+  navArrow: { fontSize: 20, color: Colors.textMuted },
 
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1B4332',
-    marginTop: 16,
-    marginBottom: 10,
-  },
+  sectionTitle: { ...Typography.subheading, marginTop: Spacing.lg, marginBottom: Spacing.sm },
   riskCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.card,
     borderRadius: 12,
-    padding: 12,
+    padding: Spacing.md,
     borderWidth: 1,
-    borderColor: '#E5E0D8',
+    borderColor: Colors.border,
+    ...Shadows.card,
   },
   riskItem: {
     flexDirection: 'row',
@@ -187,15 +183,8 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    marginRight: 12,
+    marginRight: Spacing.md,
   },
-  riskTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1B4332',
-  },
-  riskDesc: {
-    fontSize: 13,
-    color: '#5C6B6A',
-  },
+  riskTitle: { ...Typography.body, fontWeight: '600' },
+  riskDesc: { ...Typography.small, color: Colors.textSecondary },
 });
