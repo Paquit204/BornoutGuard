@@ -45,7 +45,7 @@ function RootLayoutNav() {
         <Stack.Screen name="profile" />
         <Stack.Screen name="checkin-list" />
         <Stack.Screen name="checkin-edit" />
-        <Stack.Screen name="editprofile" />   {/* renamed from edit-profile */}
+        <Stack.Screen name="edit" />
         <Stack.Screen name="settings" />
         <Stack.Screen name="report" />
         <Stack.Screen name="signout" />

@@ -1,5 +1,5 @@
- // app/report.tsx
-import * as FileSystem from 'expo-file-system';
+ // app/report.tsx – minimal working version
+import * as Print from 'expo-print';
 import { useRouter } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import React, { useEffect, useState } from 'react';
@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import BottomNav from '../components/BottomNav';
 import TopBar from '../components/TopBar';
-import { Colors, Shadows, Spacing, Typography } from '../constants/theme';
+import { BorderRadius, Colors, Shadows, Spacing, Typography } from '../constants/theme';
 import { supabase } from '../lib/supabase';
 import { DailyCheckin } from '../types/database';
 
@@ -50,32 +50,25 @@ export default function ReportScreen() {
     setLoading(false);
   };
 
-  const generateCSV = async () => {
+  const generatePDF = async () => {
     if (checkins.length === 0) {
       Alert.alert('No Data', 'No check-ins to export.');
       return;
     }
 
     setExporting(true);
-
     try {
-      const headers = 'Date,Study Hours,Sleep Hours,Assignments,Stress Level,Mood,Burnout Score,Risk Level\n';
-      const rows = checkins.map((c) => {
-        const date = new Date(c.created_at).toLocaleDateString();
-        return `${date},${c.study_hours},${c.sleep_hours},${c.assignments},${c.stress_level},${c.mood},${c.burnout_score},${c.risk_level}`;
-      }).join('\n');
-
-      const csv = headers + rows;
-      const fileUri = (FileSystem as any).documentDirectory + 'burnout_report.csv';
-
-      await FileSystem.writeAsStringAsync(fileUri, csv);
-
-      const isAvailable = await Sharing.isAvailableAsync();
-      if (isAvailable) {
-        await Sharing.shareAsync(fileUri);
-      } else {
-        Alert.alert('Share not available', 'Your device does not support sharing.');
-      }
+      // simple HTML
+      const html = `
+        <h1>BurnoutGuard Report</h1>
+        <p>Generated: ${new Date().toLocaleString()}</p>
+        <p>Total entries: ${checkins.length}</p>
+        <ul>
+          ${checkins.map(c => `<li>${new Date(c.created_at).toLocaleDateString()} - Score: ${Math.round(c.burnout_score)}</li>`).join('')}
+        </ul>
+      `;
+      const { uri } = await Print.printToFileAsync({ html });
+      await Sharing.shareAsync(uri);
     } catch (err: any) {
       Alert.alert('Error', err.message);
     } finally {
@@ -95,39 +88,25 @@ export default function ReportScreen() {
     <View style={styles.root}>
       <TopBar showBack />
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-        <Text style={styles.heading}>Export Report</Text>
-        <Text style={styles.subheading}>
-          Download your check-in history as a CSV file. You can open it in Excel or Google Sheets.
-        </Text>
+        <Text style={styles.heading}>Print Report</Text>
+        <Text style={styles.subheading}>Generate a PDF receipt of your wellness data.</Text>
 
         <View style={styles.statsCard}>
           <View style={styles.statRow}>
             <Text style={styles.statLabel}>Total Check-ins</Text>
             <Text style={styles.statValue}>{checkins.length}</Text>
           </View>
-          <View style={styles.statRow}>
-            <Text style={styles.statLabel}>Data Range</Text>
-            <Text style={styles.statValue}>
-              {checkins.length > 0
-                ? `${new Date(checkins[checkins.length - 1].created_at).toLocaleDateString()} - ${new Date(checkins[0].created_at).toLocaleDateString()}`
-                : 'No data'}
-            </Text>
-          </View>
         </View>
 
         <TouchableOpacity
           style={[styles.exportButton, (exporting || checkins.length === 0) && styles.disabledButton]}
-          onPress={generateCSV}
+          onPress={generatePDF}
           disabled={exporting || checkins.length === 0}
         >
           <Text style={styles.exportButtonText}>
-            {exporting ? 'Generating...' : 'Download CSV'}
+            {exporting ? 'Generating...' : '🖨️ Print Receipt'}
           </Text>
         </TouchableOpacity>
-
-        {checkins.length === 0 && (
-          <Text style={styles.noData}>No check-ins found. Complete a daily check-in first.</Text>
-        )}
       </ScrollView>
       <BottomNav />
     </View>
@@ -142,10 +121,10 @@ const styles = StyleSheet.create({
   subheading: { ...Typography.subheading, marginTop: Spacing.xs, marginBottom: Spacing.xl },
   statsCard: {
     backgroundColor: Colors.card,
-    borderRadius: 12,
+    borderRadius: BorderRadius.lg,
     padding: Spacing.lg,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: Colors.limeGlow,
     ...Shadows.card,
     marginBottom: Spacing.xl,
   },
@@ -160,10 +139,11 @@ const styles = StyleSheet.create({
   statValue: { ...Typography.body, color: Colors.textSecondary },
   exportButton: {
     backgroundColor: Colors.primary,
-    borderRadius: 12,
+    borderRadius: BorderRadius.lg,
     paddingVertical: Spacing.lg,
     alignItems: 'center',
     marginTop: Spacing.sm,
+    ...Shadows.button,
   },
   disabledButton: { opacity: 0.6 },
   exportButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
@@ -172,11 +152,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: Colors.background,
-  },
-  noData: {
-    textAlign: 'center',
-    color: Colors.danger,
-    marginTop: Spacing.lg,
-    ...Typography.body,
   },
 });

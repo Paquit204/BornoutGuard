@@ -7,7 +7,6 @@ import { supabase } from '../lib/supabase';
 
 export default function SettingsScreen() {
   const router = useRouter();
-  
 
   const handleClearData = () => {
     Alert.alert(
@@ -46,7 +45,8 @@ export default function SettingsScreen() {
           <Text style={styles.menuArrow}>›</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/editprofile')}>
+        {/* ✅ Fixed: now navigates to /edit */}
+        <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/edit')}>
           <Text style={styles.menuIcon}>✏️</Text>
           <Text style={styles.menuText}>Edit Profile</Text>
           <Text style={styles.menuArrow}>›</Text>
@@ -80,16 +80,16 @@ const styles = StyleSheet.create({
     padding: Spacing.lg,
     borderRadius: BorderRadius.lg,
     borderWidth: 1,
-    borderColor: Colors.limeGlow,     // ✅ lime glow border
+    borderColor: Colors.limeGlow,
     marginBottom: Spacing.sm,
-    ...Shadows.card,                 // ✅ dark shadow
+    ...Shadows.card,
   },
   menuIcon: { fontSize: 22, marginRight: Spacing.md },
   menuText: { flex: 1, ...Typography.body, fontWeight: '500' },
   menuArrow: { fontSize: 18, color: Colors.textMuted },
   signOutItem: {
     marginTop: Spacing.sm,
-    borderColor: Colors.danger,       // red border for sign-out
+    borderColor: Colors.danger,
   },
   signOutText: { color: Colors.danger },
 });

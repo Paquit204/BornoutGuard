@@ -16,9 +16,9 @@ export default function WelcomeScreen() {
       <View style={styles.content}>
         <View style={styles.iconBox}>
           <Image
-            source={require('../assets/images/BornoutGuard.png')}
+            source={require('../assets/images/logo.jpg')}
             style={styles.logo}
-            resizeMode="contain"
+            resizeMode="cover" // 👈 Binago ito para mapuno ang buong box at matakpan ang mga puting gilid
             onError={() => console.log('Welcome logo not found')}
           />
         </View>
@@ -54,11 +54,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: Spacing.xl,
     ...Shadows.card,
-    padding: Spacing.lg,
+    overflow: 'hidden', // Pinupunasan nito ang sumobrang image sa rounded corner
   },
   logo: {
-    width: 90,
-    height: 90,
+    width: '100%',
+    height: '100%',
   },
   title: {
     ...Typography.heading,

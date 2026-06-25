@@ -1,4 +1,4 @@
- // app/editprofile.tsx
+ // app/edit.tsx
 import { Feather } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -21,7 +21,7 @@ import { BorderRadius, Colors, Shadows, Spacing, Typography } from '../constants
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 
-export default function EditProfileScreen() {
+export default function EditScreen() {
   const { profile, refreshProfile } = useAuth();
   const [fullName, setFullName] = useState(profile?.full_name || '');
   const [loading, setLoading] = useState(false);
@@ -35,13 +35,10 @@ export default function EditProfileScreen() {
   );
 
   React.useEffect(() => {
-    if (profile?.full_name) {
-      setFullName(profile.full_name);
-    }
+    if (profile?.full_name) setFullName(profile.full_name);
   }, [profile?.full_name]);
 
   const pickImage = async () => {
-    console.log('📸 Pick image pressed');
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert('Permission required', 'We need access to your gallery to upload a photo.');
@@ -55,34 +52,23 @@ export default function EditProfileScreen() {
       quality: 0.7,
     });
 
-    console.log('📸 Image picker result:', result);
-
     if (!result.canceled && result.assets.length > 0) {
       await uploadAvatar(result.assets[0].uri);
-    } else {
-      console.log('📸 User cancelled or no asset');
     }
   };
 
   const uploadAvatar = async (uri: string) => {
-    if (!profile) {
-      console.log('❌ No profile found');
-      return;
-    }
-    console.log('🔄 Starting upload for user:', profile.id);
+    if (!profile) return;
     setUploading(true);
 
     try {
       const fileExt = uri.split('.').pop();
       const fileName = `${profile.id}.${fileExt}`;
       const filePath = `${profile.id}/${fileName}`;
-      console.log('📁 File path:', filePath);
 
       const response = await fetch(uri);
       const blob = await response.blob();
-      console.log('📦 Blob size:', blob.size);
 
-      console.log('⬆️ Uploading to bucket "avatars"...');
       const { error: uploadError } = await supabase.storage
         .from('avatars')
         .upload(filePath, blob, {
@@ -90,32 +76,21 @@ export default function EditProfileScreen() {
           upsert: true,
         });
 
-      if (uploadError) {
-        console.error('❌ Upload error:', uploadError);
-        throw uploadError;
-      }
-      console.log('✅ Upload successful');
+      if (uploadError) throw uploadError;
 
       const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
       const publicUrl = urlData.publicUrl;
-      console.log('🔗 Public URL:', publicUrl);
 
-      console.log('✏️ Updating profile...');
       const { error: updateError } = await supabase
         .from('profiles')
         .update({ avatar_url: publicUrl })
         .eq('id', profile.id);
 
-      if (updateError) {
-        console.error('❌ Update error:', updateError);
-        throw updateError;
-      }
-      console.log('✅ Profile updated');
+      if (updateError) throw updateError;
 
       await refreshProfile();
       Alert.alert('Success', 'Profile photo updated!');
     } catch (error: any) {
-      console.error('❌ Error:', error);
       Alert.alert('Upload failed', error.message);
     } finally {
       setUploading(false);
@@ -146,10 +121,7 @@ export default function EditProfileScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.root}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
+    <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <TopBar showBack />
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.heading}>Edit Profile</Text>
@@ -205,12 +177,7 @@ export default function EditProfileScreen() {
           </View>
         </View>
 
-        <CustomButton
-          title="Save Changes"
-          onPress={handleSave}
-          loading={loading}
-          disabled={uploading}
-        />
+        <CustomButton title="Save Changes" onPress={handleSave} loading={loading} />
       </ScrollView>
     </KeyboardAvoidingView>
   );
