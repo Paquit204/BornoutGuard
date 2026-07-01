@@ -4,7 +4,7 @@ import React, { useCallback } from 'react';
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import BottomNav from '../components/BottomNav';
 import TopBar from '../components/TopBar';
-import { Colors, Shadows, Spacing, Typography } from '../constants/theme';
+import { BorderRadius, Colors, Shadows, Spacing, Typography } from '../constants/theme';
 import { useAuth } from '../hooks/useAuth';
 
 export default function ProfileScreen() {
@@ -26,6 +26,7 @@ export default function ProfileScreen() {
       <ScrollView
         style={styles.container}
         contentContainerStyle={[styles.content, { paddingBottom: 90 }]}
+        showsVerticalScrollIndicator={false}
       >
         {/* User Info */}
         <View style={styles.userSection}>
@@ -42,7 +43,7 @@ export default function ProfileScreen() {
           <Text style={styles.userEmail}>{profile?.email}</Text>
         </View>
 
-        {/* Navigation Cards */}
+        {/* Navigation Cards - now with lime glow + dark shadow */}
         <TouchableOpacity style={styles.navCard} onPress={() => router.push('/settings')}>
           <View style={[styles.navIconWrapper, { backgroundColor: '#E8F5E9' }]}>
             <Text style={styles.navIcon}>⚙️</Text>
@@ -54,6 +55,7 @@ export default function ProfileScreen() {
           <Text style={styles.navArrow}>›</Text>
         </TouchableOpacity>
 
+        {/* ✅ Export Wellness Data – fully functional */}
         <TouchableOpacity style={styles.navCard} onPress={() => router.push('/report')}>
           <View style={[styles.navIconWrapper, { backgroundColor: '#E3F2FD' }]}>
             <Text style={styles.navIcon}>📊</Text>
@@ -105,12 +107,12 @@ const styles = StyleSheet.create({
   userSection: {
     alignItems: 'center',
     backgroundColor: Colors.card,
-    borderRadius: 16,
+    borderRadius: BorderRadius.lg,
     padding: Spacing.xl,
     marginBottom: Spacing.lg,
     borderWidth: 1,
-    borderColor: Colors.border,
-    ...Shadows.card,
+    borderColor: Colors.limeGlow,      // ✅ lime glow border
+    ...Shadows.card,                  // ✅ dark shadow
   },
   avatarLarge: {
     width: 80,
@@ -144,12 +146,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.card,
-    borderRadius: 12,
+    borderRadius: BorderRadius.lg,
     padding: Spacing.md,
     marginBottom: Spacing.sm,
     borderWidth: 1,
-    borderColor: Colors.border,
-    ...Shadows.card,
+    borderColor: Colors.limeGlow,      // ✅ lime glow border
+    ...Shadows.card,                  // ✅ dark shadow
   },
   navIconWrapper: {
     width: 44,
@@ -168,11 +170,11 @@ const styles = StyleSheet.create({
   sectionTitle: { ...Typography.subheading, marginTop: Spacing.lg, marginBottom: Spacing.sm },
   riskCard: {
     backgroundColor: Colors.card,
-    borderRadius: 12,
+    borderRadius: BorderRadius.lg,
     padding: Spacing.md,
     borderWidth: 1,
-    borderColor: Colors.border,
-    ...Shadows.card,
+    borderColor: Colors.limeGlow,      // ✅ lime glow border
+    ...Shadows.card,                  // ✅ dark shadow
   },
   riskItem: {
     flexDirection: 'row',

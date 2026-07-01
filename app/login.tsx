@@ -1,10 +1,10 @@
  // app/login.tsx
-import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import React, { useState } from 'react';
 import {
   Alert,
+  Image, // ✅ import Image
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -60,16 +60,19 @@ export default function LoginScreen() {
         contentContainerStyle={styles.scrollContainer}
         showsVerticalScrollIndicator={false}
       >
-        {/* Brand Header */}
+        {/* Brand Header with your logo image */}
         <View style={styles.headerBlock}>
           <View style={styles.brandIcon}>
-            <Feather name="shield" size={28} color={Colors.white} />
+            <Image
+              source={require('../assets/images/logo.jpg')}   // ✅ your logo
+              style={styles.logoImage}
+              resizeMode="cover" // 👈 Ginawang cover para punan ang buong box nang walang white gaps
+            />
           </View>
           <Text style={styles.title}>BurnoutGuard</Text>
           <Text style={styles.subtitle}>Sign in to monitor your wellness metrics</Text>
         </View>
 
-        {/* Card with form */}
         <View style={styles.card}>
           <View style={styles.form}>
             <View style={styles.inputGroup}>
@@ -115,7 +118,6 @@ export default function LoginScreen() {
           </View>
         </View>
 
-        {/* Footer */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>Don't have an account? </Text>
           <TouchableOpacity onPress={() => router.push('/signup')}>
@@ -147,11 +149,16 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: BorderRadius.md,
-    backgroundColor: Colors.primary,
+    backgroundColor: '#000000', // 👈 Pinalitan ng Black background mula sa Colors.primary
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: Spacing.md,
     ...Shadows.premium,
+    overflow: 'hidden', // 👈 Tinitiyak na hindi lalagpas ang imahe sa rounded corners
+  },
+  logoImage: {
+    width: '100%',  // 👈 Ginawang 100% para sakop ang buong lapad ng container
+    height: '100%', // 👈 Ginawang 100% para sakop ang buong taas ng container
   },
   title: {
     ...Typography.heading,
