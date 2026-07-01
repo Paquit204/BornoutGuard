@@ -44,11 +44,14 @@ function RootLayoutNav() {
         <Stack.Screen name="analytics" />
         <Stack.Screen name="profile" />
         <Stack.Screen name="checkin-list" />
+
         <Stack.Screen name="checkin-edit" />
+         <Stack.Screen name="checkin-view" />  
         <Stack.Screen name="edit" />
         <Stack.Screen name="settings" />
         <Stack.Screen name="report" />
         <Stack.Screen name="signout" />
+        <Stack.Screen name="manage-delete" />
       </Stack>
     </View>
   );
